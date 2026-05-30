@@ -457,68 +457,9 @@ app.post('/api/chat', checkAuth, async (req, res) => {
       return res.status(400).json({ error: `เซิร์ฟเวอร์ยังไม่ได้ตั้งค่า API Key สำหรับรุ่น: ${model}` });
     }
 
-    let aiResult = '';
-
-    if (isModelOpenai) {
-      const openaiUrl = 'https://api.openai.com/v1/chat/completions';
-      
-      const openAiMessages = history.map(h => ({
-        role: h.role === 'model' ? 'assistant' : 'user',
-        content: h.parts[0].text
-      }));
-      
-      openAiMessages.unshift({
-        role: 'system',
-        content: "คุณคือบอตผู้ช่วยส่วนตัวอัจฉริยะที่แชทพูดคุยทั่วไปได้อย่างเป็นกันเองและให้คำแนะนำที่มีประโยชน์ ภาษาหลักของคุณคือภาษาไทย เขียนตอบให้สุภาพ มีการใช้ Emoji ตกแต่งให้น่าอ่านและกระชับพอเหมาะ"
-      });
-
-      const response = await fetch(openaiUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiKey}`
-        },
-        body: JSON.stringify({
-          model: model,
-          messages: openAiMessages
-        })
-      });
-
-      if (!response.ok) {
-        const errorJson = await response.json().catch(() => ({}));
-        throw new Error(errorJson.error?.message || `OpenAI HTTP error ${response.status}`);
-      }
-
-      const responseData = await response.json();
-      aiResult = responseData.choices?.[0]?.message?.content || '';
-    } else {
-      const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
-      
-      const response = await fetch(geminiUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          contents: history,
-          systemInstruction: {
-            parts: [{ text: "คุณคือบอตผู้ช่วยส่วนตัวอัจฉริยะที่แชทพูดคุยทั่วไปได้อย่างเป็นกันเองและให้คำแนะนำที่มีประโยชน์ ภาษาหลักของคุณคือภาษาไทย เขียนตอบให้สุภาพ มีการใช้ Emoji ตกแต่งให้น่าอ่านและกระชับพอเหมาะ" }]
-          }
-        })
-      });
-
-      if (!response.ok) {
-        const errorJson = await response.json().catch(() => ({}));
-        throw new Error(errorJson.error?.message || `Gemini HTTP error ${response.status}`);
-      }
-
-      const responseData = await response.json();
-      aiResult = responseData.candidates?.[0]?.content?.parts?.[0]?.text || '';
-    }
-    // Save to server-side chat messages database
+    // 1. Save and broadcast user message immediately
     const messages = loadMessages();
     const userMsgId = 'msg_' + Date.now() + '_' + Math.floor(1000 + Math.random() * 9000);
-    const botMsgId = 'msg_' + (Date.now() + 1) + '_' + Math.floor(1000 + Math.random() * 9000);
     
     messages.push({
       id: userMsgId,
@@ -531,21 +472,118 @@ app.post('/api/chat', checkAuth, async (req, res) => {
       timestamp: Date.now()
     });
     
-    messages.push({
-      id: botMsgId,
-      sender: 'bot',
-      username: 'bot',
-      nickname: 'MT-TOPUP AI',
-      profileImage: '',
-      text: aiResult,
-      imageSrc: null,
-      timestamp: Date.now() + 1
-    });
-    
     saveMessages(messages);
-    broadcastMessageUpdate(); // Emit to all sockets
+    broadcastMessageUpdate(); // Instant sync
 
-    res.json({ text: aiResult });
+    let aiResult = '';
+
+    try {
+      if (isModelOpenai) {
+        const openaiUrl = 'https://api.openai.com/v1/chat/completions';
+        
+        const openAiMessages = history.map(h => ({
+          role: h.role === 'model' ? 'assistant' : 'user',
+          content: h.parts[0].text
+        }));
+        
+        openAiMessages.unshift({
+          role: 'system',
+          content: "คุณคือบอตผู้ช่วยส่วนตัวอัจฉริยะที่แชทพูดคุยทั่วไปได้อย่างเป็นกันเองและให้คำแนะนำที่มีประโยชน์ ภาษาหลักของคุณคือภาษาไทย เขียนตอบให้สุภาพ มีการใช้ Emoji ตกแต่งให้น่าอ่านและกระชับพอเหมาะ"
+        });
+
+        const response = await fetch(openaiUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${apiKey}`
+          },
+          body: JSON.stringify({
+            model: model,
+            messages: openAiMessages
+          })
+        });
+
+        if (!response.ok) {
+          const errorJson = await response.json().catch(() => ({}));
+          throw new Error(errorJson.error?.message || `OpenAI HTTP error ${response.status}`);
+        }
+
+        const responseData = await response.json();
+        aiResult = responseData.choices?.[0]?.message?.content || '';
+      } else {
+        const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+        
+        const response = await fetch(geminiUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            contents: history,
+            systemInstruction: {
+              parts: [{ text: "คุณคือบอตผู้ช่วยส่วนตัวอัจฉริยะที่แชทพูดคุยทั่วไปได้อย่างเป็นกันเองและให้คำแนะนำที่มีประโยชน์ ภาษาหลักของคุณคือภาษาไทย เขียนตอบให้สุภาพ มีการใช้ Emoji ตกแต่งให้น่าอ่านและกระชับพอเหมาะ" }]
+            }
+          })
+        });
+
+        if (!response.ok) {
+          const errorJson = await response.json().catch(() => ({}));
+          throw new Error(errorJson.error?.message || `Gemini HTTP error ${response.status}`);
+        }
+
+        const responseData = await response.json();
+        aiResult = responseData.candidates?.[0]?.content?.parts?.[0]?.text || '';
+      }
+
+      // 2. Save and broadcast successful bot response
+      const activeMessages = loadMessages();
+      const botMsgId = 'msg_' + (Date.now() + 1) + '_' + Math.floor(1000 + Math.random() * 9000);
+      
+      activeMessages.push({
+        id: botMsgId,
+        sender: 'bot',
+        username: 'bot',
+        nickname: 'MT-TOPUP AI',
+        profileImage: '',
+        text: aiResult,
+        imageSrc: null,
+        timestamp: Date.now() + 1
+      });
+      
+      saveMessages(activeMessages);
+      broadcastMessageUpdate();
+
+      res.json({ text: aiResult });
+
+    } catch (apiError) {
+      console.error('API Error details:', apiError);
+      
+      // Formulate a clean system/bot error message
+      let friendlyError = `เกิดข้อผิดพลาดในการเชื่อมต่อกับ AI: ${apiError.message}`;
+      if (apiError.message.includes('quota') || apiError.message.includes('Rate limit') || apiError.message.includes('429')) {
+        friendlyError = `**⚠️ โควต้าการใช้งานโมเดลเต็มชั่วคราว (Rate Limit / Quota Exceeded)**\n\nบัญชีแบบฟรีของ Gemini API มีการจำกัดการใช้งาน กรุณารอสักครู่แล้วส่งใหม่ หรือสลับรุ่นโมเดลเพื่อใช้งานต่อครับ`;
+      }
+      
+      // Save and broadcast error bot response
+      const activeMessages = loadMessages();
+      const botMsgId = 'msg_' + (Date.now() + 1) + '_' + Math.floor(1000 + Math.random() * 9000);
+      
+      activeMessages.push({
+        id: botMsgId,
+        sender: 'bot',
+        username: 'bot',
+        nickname: 'MT-TOPUP AI',
+        profileImage: '',
+        text: friendlyError,
+        imageSrc: null,
+        timestamp: Date.now() + 1
+      });
+      
+      saveMessages(activeMessages);
+      broadcastMessageUpdate();
+
+      res.status(500).json({ error: friendlyError });
+    }
 
   } catch (error) {
     console.error('Chat error:', error);
@@ -564,6 +602,30 @@ app.post('/api/ocr', checkAuth, async (req, res) => {
     if (!apiKey) {
       return res.status(400).json({ error: `เซิร์ฟเวอร์ยังไม่ได้ตั้งค่า API Key สำหรับรุ่น: ${model}` });
     }
+
+    // Save image locally if present
+    let savedImageName = null;
+    if (image && image.base64) {
+      savedImageName = saveImageLocally(image.base64, image.mimeType);
+    }
+
+    // 1. Save and broadcast user's OCR request message immediately
+    const chatMsgs = loadMessages();
+    const userMsgId = 'msg_' + Date.now() + '_' + Math.floor(1000 + Math.random() * 9000);
+    
+    chatMsgs.push({
+      id: userMsgId,
+      sender: 'user',
+      username: req.user.username,
+      nickname: req.user.nickname || req.user.username,
+      profileImage: req.user.profileImage || '',
+      text: userText || `อัปโหลดรูปภาพเพื่อวิเคราะห์และบันทึกข้อมูลเข้าร้านเติมเงิน`,
+      imageSrc: savedImageName ? `/uploads/${savedImageName}` : null,
+      timestamp: Date.now()
+    });
+    
+    saveMessages(chatMsgs);
+    broadcastMessageUpdate(); // Instant sync
 
     const systemPrompt = `
 คุณคือผู้ช่วย AI อัจฉริยะที่เชี่ยวชาญด้านการสกัดข้อความจากภาพสลิปโอนเงินหรือภาพประวัติการทำรายการเติมเกมออนไลน์
@@ -596,192 +658,203 @@ app.post('/api/ocr', checkAuth, async (req, res) => {
     const finalPrompt = `${systemPrompt}\nคำขอเพิ่มเติมจากผู้ใช้: ${userText}`;
     let rawAiResult = '';
 
-    if (isModelOpenai) {
-      const openaiUrl = 'https://api.openai.com/v1/chat/completions';
-      const payload = {
-        model: model,
-        messages: [
-          {
-            role: 'user',
-            content: [
-              { type: 'text', text: finalPrompt },
+    try {
+      if (isModelOpenai) {
+        const openaiUrl = 'https://api.openai.com/v1/chat/completions';
+        const payload = {
+          model: model,
+          messages: [
+            {
+              role: 'user',
+              content: [
+                { type: 'text', text: finalPrompt },
+                {
+                  type: 'image_url',
+                  image_url: {
+                    url: `data:${image.mimeType};base64,${image.base64}`
+                  }
+                }
+              ]
+            }
+          ]
+        };
+
+        const response = await fetch(openaiUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${apiKey}`
+          },
+          body: JSON.stringify(payload)
+        });
+
+        if (!response.ok) {
+          const errorJson = await response.json().catch(() => ({}));
+          throw new Error(errorJson.error?.message || `OpenAI HTTP error ${response.status}`);
+        }
+
+        const responseData = await response.json();
+        rawAiResult = responseData.choices?.[0]?.message?.content || '';
+      } else {
+        const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+        const payload = {
+          contents: [{
+            parts: [
+              { text: finalPrompt },
               {
-                type: 'image_url',
-                image_url: {
-                  url: `data:${image.mimeType};base64,${image.base64}`
+                inlineData: {
+                  mimeType: image.mimeType,
+                  data: image.base64
                 }
               }
             ]
-          }
-        ]
-      };
-
-      const response = await fetch(openaiUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiKey}`
-        },
-        body: JSON.stringify(payload)
-      });
-
-      if (!response.ok) {
-        const errorJson = await response.json().catch(() => ({}));
-        throw new Error(errorJson.error?.message || `OpenAI HTTP error ${response.status}`);
-      }
-
-      const responseData = await response.json();
-      rawAiResult = responseData.choices?.[0]?.message?.content || '';
-    } else {
-      const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
-      const payload = {
-        contents: [{
-          parts: [
-            { text: finalPrompt },
-            {
-              inlineData: {
-                mimeType: image.mimeType,
-                data: image.base64
-              }
-            }
-          ]
-        }]
-      };
-
-      const response = await fetch(geminiUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(payload)
-      });
-
-      if (!response.ok) {
-        const errorJson = await response.json().catch(() => ({}));
-        throw new Error(errorJson.error?.message || `Gemini HTTP error ${response.status}`);
-      }
-
-      const responseData = await response.json();
-      rawAiResult = responseData.candidates?.[0]?.content?.parts?.[0]?.text || '';
-    }
-
-    if (!rawAiResult) {
-      throw new Error('ไม่ได้รับการตอบกลับข้อความจาก AI');
-    }
-
-    // 2. Parse transactions data
-    let transactions = [];
-    const dataMatch = rawAiResult.match(/---SHEET_DATA_START---([\s\S]*?)---SHEET_DATA_END---/);
-    
-    if (dataMatch) {
-      try {
-        const jsonData = JSON.parse(dataMatch[1].trim());
-        transactions = Array.isArray(jsonData) ? jsonData : [jsonData];
-      } catch (jsonErr) {
-        console.error("Failed to parse JSON sheet data:", jsonErr);
-      }
-    }
-
-    // 3. Send to Google Sheets Web App if URL is configured
-    let sheetUploadStatus = 'skipped';
-    let sheetUploadError = null;
-
-    // Create current formatted datetime
-    const now = new Date();
-    const day = String(now.getDate()).padStart(2, '0');
-    const month = String(now.getMonth() + 1).padStart(2, '0');
-    const year = now.getFullYear();
-    const hours = String(now.getHours()).padStart(2, '0');
-    const minutes = String(now.getMinutes()).padStart(2, '0');
-    const formattedDateTime = `${day}/${month}/${year} ${hours}:${minutes}`;
-
-    if (webappUrl && transactions.length > 0) {
-      try {
-        const sheetPayload = {
-          datetime: formattedDateTime,
-          transactions: transactions,
-          base64: image.base64,
-          mimeType: image.mimeType
+          }]
         };
 
-        await fetch(webappUrl, {
+        const response = await fetch(geminiUrl, {
           method: 'POST',
           headers: {
-            'Content-Type': 'text/plain'
+            'Content-Type': 'application/json'
           },
-          body: JSON.stringify(sheetPayload)
+          body: JSON.stringify(payload)
         });
 
-        sheetUploadStatus = 'success';
-      } catch (sheetError) {
-        console.error('Google Sheet Upload failed:', sheetError);
-        sheetUploadStatus = 'failed';
-        sheetUploadError = sheetError.message;
+        if (!response.ok) {
+          const errorJson = await response.json().catch(() => ({}));
+          throw new Error(errorJson.error?.message || `Gemini HTTP error ${response.status}`);
+        }
+
+        const responseData = await response.json();
+        rawAiResult = responseData.candidates?.[0]?.content?.parts?.[0]?.text || '';
       }
-    } else if (!webappUrl) {
-      sheetUploadStatus = 'no_url';
+
+      if (!rawAiResult) {
+        throw new Error('ไม่ได้รับการตอบกลับข้อความจาก AI');
+      }
+
+      // 2. Parse transactions data
+      let transactions = [];
+      const dataMatch = rawAiResult.match(/---SHEET_DATA_START---([\s\S]*?)---SHEET_DATA_END---/);
+      
+      if (dataMatch) {
+        try {
+          const jsonData = JSON.parse(dataMatch[1].trim());
+          transactions = Array.isArray(jsonData) ? jsonData : [jsonData];
+        } catch (jsonErr) {
+          console.error("Failed to parse JSON sheet data:", jsonErr);
+        }
+      }
+
+      // 3. Send to Google Sheets Web App if URL is configured
+      let sheetUploadStatus = 'skipped';
+      let sheetUploadError = null;
+
+      // Create current formatted datetime
+      const now = new Date();
+      const day = String(now.getDate()).padStart(2, '0');
+      const month = String(now.getMonth() + 1).padStart(2, '0');
+      const year = now.getFullYear();
+      const hours = String(now.getHours()).padStart(2, '0');
+      const minutes = String(now.getMinutes()).padStart(2, '0');
+      const formattedDateTime = `${day}/${month}/${year} ${hours}:${minutes}`;
+
+      if (webappUrl && transactions.length > 0) {
+        try {
+          const sheetPayload = {
+            datetime: formattedDateTime,
+            transactions: transactions,
+            base64: image.base64,
+            mimeType: image.mimeType
+          };
+
+          await fetch(webappUrl, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'text/plain'
+            },
+            body: JSON.stringify(sheetPayload)
+          });
+
+          sheetUploadStatus = 'success';
+        } catch (sheetError) {
+          console.error('Google Sheet Upload failed:', sheetError);
+          sheetUploadStatus = 'failed';
+          sheetUploadError = sheetError.message;
+        }
+      } else if (!webappUrl) {
+        sheetUploadStatus = 'no_url';
+      }
+
+      // 4. Save and broadcast successful bot response
+      const activeMsgs = loadMessages();
+      const botMsgId = 'msg_' + (Date.now() + 1) + '_' + Math.floor(1000 + Math.random() * 9000);
+      
+      // Clean technical tags from text if exists
+      let botText = rawAiResult || '';
+      if (botText) {
+        botText = botText.replace(/---SHEET_DATA_START---[\s\S]*?---SHEET_DATA_END---/g, '').trim();
+      }
+      
+      activeMsgs.push({
+        id: botMsgId,
+        sender: 'bot',
+        username: 'bot',
+        nickname: 'MT-TOPUP AI',
+        profileImage: '',
+        text: botText,
+        imageSrc: null,
+        transactions: transactions,
+        sheetStatus: sheetUploadStatus,
+        sheetError: sheetUploadError,
+        timestamp: Date.now() + 1
+      });
+      
+      saveMessages(activeMsgs);
+      broadcastMessageUpdate();
+
+      // Log transaction to JSON database file for Admin Dashboard view!
+      if (transactions.length > 0) {
+        logTransaction(formattedDateTime, transactions, sheetUploadStatus, savedImageName);
+      }
+
+      res.json({
+        text: rawAiResult,
+        transactions: transactions,
+        sheetStatus: sheetUploadStatus,
+        sheetError: sheetUploadError
+      });
+
+    } catch (apiError) {
+      console.error('OCR API Error details:', apiError);
+      
+      let friendlyError = `เกิดข้อผิดพลาดในการวิเคราะห์รูปภาพ: ${apiError.message}`;
+      if (apiError.message.includes('quota') || apiError.message.includes('Rate limit') || apiError.message.includes('429')) {
+        friendlyError = `**⚠️ โควต้าการใช้งานโมเดลเต็มชั่วคราว (Rate Limit / Quota Exceeded)**\n\nบัญชีแบบฟรีของ Gemini API มีการจำกัดการใช้งาน กรุณารอสักครู่แล้วลองใหม่ หรือสลับรุ่นโมเดลเพื่อใช้งานต่อครับ`;
+      }
+      
+      // Save and broadcast error bot response
+      const activeMsgs = loadMessages();
+      const botMsgId = 'msg_' + (Date.now() + 1) + '_' + Math.floor(1000 + Math.random() * 9000);
+      
+      activeMsgs.push({
+        id: botMsgId,
+        sender: 'bot',
+        username: 'bot',
+        nickname: 'MT-TOPUP AI',
+        profileImage: '',
+        text: friendlyError,
+        imageSrc: null,
+        timestamp: Date.now() + 1
+      });
+      
+      saveMessages(activeMsgs);
+      broadcastMessageUpdate();
+
+      res.status(500).json({ error: friendlyError });
     }
-
-    // Save image locally if present
-    let savedImageName = null;
-    if (image && image.base64) {
-      savedImageName = saveImageLocally(image.base64, image.mimeType);
-    }
-
-    // Save to server-side chat messages database
-    const chatMsgs = loadMessages();
-    const userMsgId = 'msg_' + Date.now() + '_' + Math.floor(1000 + Math.random() * 9000);
-    const botMsgId = 'msg_' + (Date.now() + 1) + '_' + Math.floor(1000 + Math.random() * 9000);
-    
-    chatMsgs.push({
-      id: userMsgId,
-      sender: 'user',
-      username: req.user.username,
-      nickname: req.user.nickname || req.user.username,
-      profileImage: req.user.profileImage || '',
-      text: userText || `อัปโหลดรูปภาพเพื่อวิเคราะห์และบันทึกข้อมูลเข้าร้านเติมเงิน`,
-      imageSrc: savedImageName ? `/uploads/${savedImageName}` : null,
-      timestamp: Date.now()
-    });
-    
-    // Clean technical tags from text if exists
-    let botText = rawAiResult || '';
-    if (botText) {
-      botText = botText.replace(/---SHEET_DATA_START---[\s\S]*?---SHEET_DATA_END---/g, '').trim();
-    }
-    
-    chatMsgs.push({
-      id: botMsgId,
-      sender: 'bot',
-      username: 'bot',
-      nickname: 'MT-TOPUP AI',
-      profileImage: '',
-      text: botText,
-      imageSrc: null,
-      transactions: transactions,
-      sheetStatus: sheetUploadStatus,
-      sheetError: sheetUploadError,
-      timestamp: Date.now() + 1
-    });
-    
-    saveMessages(chatMsgs);
-    broadcastMessageUpdate(); // Emit to all sockets
-
-    // 4. Log transaction to JSON database file for Admin Dashboard view!
-    if (transactions.length > 0) {
-      logTransaction(formattedDateTime, transactions, sheetUploadStatus, savedImageName);
-    }
-
-
-    res.json({
-      text: rawAiResult,
-      transactions: transactions,
-      sheetStatus: sheetUploadStatus,
-      sheetError: sheetUploadError
-    });
 
   } catch (error) {
-    console.error('OCR error:', error);
+    console.error('OCR overall error:', error);
     res.status(500).json({ error: error.message });
   }
 });
