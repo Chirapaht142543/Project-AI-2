@@ -793,15 +793,16 @@ async function handleFormSubmit(e) {
   // Prevent sending empty requests
   if (!text && !hasImage) return;
   
-  // Validate basic configurations before running
-  if (!STATE.apiKey) {
-    appendAlertMessage('กรุณากรอก **AI API Key** ในการตั้งค่าด้านซ้ายมือก่อนใช้งานนะครับ', 'error');
-    return;
-  }
-  
-  if (hasImage && !STATE.webappUrl) {
-    appendAlertMessage('กรุณากรอก **Google Sheets Web App URL** ในการตั้งค่าด้านซ้ายมือ เพื่อบันทึกภาพขึ้นชีตนะครับ', 'error');
-    return;
+  // If sending an image, we require AI API Key and Sheets URL configurations
+  if (hasImage) {
+    if (!STATE.apiKey) {
+      appendAlertMessage('กรุณากรอก **AI API Key** ในการตั้งค่าด้านซ้ายมือก่อนใช้งานนะครับ', 'error');
+      return;
+    }
+    if (!STATE.webappUrl) {
+      appendAlertMessage('กรุณากรอก **Google Sheets Web App URL** ในการตั้งค่าด้านซ้ายมือ เพื่อบันทึกภาพขึ้นชีตนะครับ', 'error');
+      return;
+    }
   }
   
   STATE.isSendingMessage = true;
@@ -820,24 +821,18 @@ async function handleFormSubmit(e) {
     const processingImage = STATE.currentImage;
     removeImageAttachment();
     
-    // 2. Add Typing / Loading Indicator for AI Response
-    const typingIndicator = createTypingIndicator();
-    
-    try {
-      if (processingImage) {
-        // IMAGE WITH OPTIONAL TEXT WORKFLOW
+    if (processingImage) {
+      // IMAGE SCAN WORKFLOW (AI-Powered)
+      const typingIndicator = createTypingIndicator();
+      try {
         await handleImageOcrWorkflow(userText, processingImage, typingIndicator);
-      } else {
-        // PURE TEXT CONVERSATION WORKFLOW
-        await handleTextChatWorkflow(userText, typingIndicator);
-      }
-    } catch (error) {
-      console.error(error);
-      typingIndicator.remove();
-      
-      // Check if it is a Quota Exceeded error
-      if (error.message.includes('quota') || error.message.includes('Quota exceeded') || error.message.includes('429') || error.message.includes('exceeded your current quota')) {
-        appendAlertMessage(`
+      } catch (error) {
+        console.error(error);
+        typingIndicator.remove();
+        
+        // Quota exceeded / high demand messages
+        if (error.message.includes('quota') || error.message.includes('Quota exceeded') || error.message.includes('429') || error.message.includes('exceeded your current quota')) {
+          appendAlertMessage(`
 **⚠️ โควต้าการใช้งานโมเดลเต็มชั่วคราว (Rate Limit / Quota Exceeded)**
 
 บัญชีแบบฟรีของ Gemini API (Free Tier) จะมีการจำกัดจำนวนครั้งในการส่งคำขอต่อนาที หรือโควต้าประจำวันของคุณเต็มแล้ว
@@ -845,9 +840,9 @@ async function handleFormSubmit(e) {
 **💡 วิธีการแก้ไขง่ายๆ:**
 1. โปรดรอประมาณ 30 วินาที ถึง 1 นาที แล้วทดลองส่งรูปภาพใหม่อีกครั้ง
 2. หรือแผงการตั้งค่าด้านซ้าย สลับประเภทโมเดลเป็น **Google: Gemini 1.5 Flash (โมเดลสำรอง)** ซึ่งเป็นรุ่นก่อนหน้าที่มีโควต้าการใช้งานแยกจากกัน ทำให้ทำงานประมวลผลต่อได้ทันทีครับ!
-        `, 'error');
-      } else if (error.message.includes('high demand') || error.message.includes('temporary') || error.message.includes('503') || error.message.includes('experiences')) {
-        appendAlertMessage(`
+          `, 'error');
+        } else if (error.message.includes('high demand') || error.message.includes('temporary') || error.message.includes('503') || error.message.includes('experiences')) {
+          appendAlertMessage(`
 **⚠️ โมเดลนี้กำลังมีผู้ใช้งานหนาแน่นชั่วคราว (High Demand / Spikes in Demand)**
 
 ขณะนี้โมเดลที่คุณเลือกมีผู้ใช้ทั่วโลกเข้าใช้งานพร้อมกันเป็นจำนวนมากทำให้ระบบฝั่งเซิร์ฟเวอร์เต็มชั่วคราว
@@ -855,9 +850,31 @@ async function handleFormSubmit(e) {
 **💡 วิธีการแก้ไขง่ายๆ:**
 1. สลับรุ่นโมเดล AI ในแผงตั้งค่าด้านซ้ายให้เป็น **Google: Gemini 1.5 Flash (โมเดลสำรอง)** ซึ่งเป็นรุ่นที่มีเครื่องเซิร์ฟเวอร์แยกต่างหากและมักจะไม่ค่อยเต็มครับ!
 2. หรือรอประมาณ 10-20 วินาทีแล้วลองกดส่งใหม่อีกครั้งครับ
-        `, 'error');
-      } else {
-        appendAlertMessage(`เกิดข้อผิดพลาดในการรันระบบ: ${error.message}`, 'error');
+          `, 'error');
+        } else {
+          appendAlertMessage(`เกิดข้อผิดพลาดในการรันระบบ: ${error.message}`, 'error');
+        }
+      }
+    } else {
+      // PURE TEXT CONVERSATION WORKFLOW (Pure Human-to-Human Live Chat!)
+      if (STATE.useBackend) {
+        try {
+          const response = await fetch('/api/chat', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': sessionStorage.getItem('access_password') || ''
+            },
+            body: JSON.stringify({ message: userText })
+          });
+          
+          if (!response.ok) {
+            const errorJson = await response.json().catch(() => ({}));
+            throw new Error(errorJson.error || `HTTP error ${response.status}`);
+          }
+        } catch (backendChatError) {
+          console.error('Failed to sync text message with backend:', backendChatError);
+        }
       }
     }
   } finally {
