@@ -175,17 +175,13 @@
       <!-- PREVIEW PANEL (When image is loaded but not sent) -->
       <div id="image-preview-panel" class="preview-panel hidden">
         <div class="preview-header">
-          <span><i class="fa-solid fa-image"></i> รูปภาพที่เลือกพร้อมประมวลผล</span>
-          <button id="btn-cancel-image" class="btn-close" title="ยกเลิกรูปภาพ">
+          <span><i class="fa-solid fa-image"></i> รูปภาพที่เลือกพร้อมประมวลผล (เลือกสูงสุด 5 รูป)</span>
+          <button id="btn-cancel-image" class="btn-close" title="ยกเลิกรูปภาพทั้งหมด">
             <i class="fa-solid fa-xmark"></i>
           </button>
         </div>
-        <div class="preview-body">
-          <img id="image-preview-thumbnail" src="" alt="Thumbnail preview">
-          <div class="preview-details">
-            <span id="preview-filename">filename.jpg</span>
-            <span id="preview-filesize">0 KB</span>
-          </div>
+        <div id="preview-body-container" style="display: flex; flex-wrap: wrap; gap: 12px; max-height: 140px; overflow-y: auto; padding: 4px 0;">
+          <!-- Dynamic previews injected via JS -->
         </div>
       </div>
       
@@ -194,7 +190,7 @@
         <form id="chat-input-form" class="chat-input-container">
           
           <!-- File selection buttons hidden -->
-          <input type="file" id="file-uploader" accept="image/*" class="hidden">
+          <input type="file" id="file-uploader" accept="image/*" class="hidden" multiple>
           
           <!-- Action controls inside input box -->
           <div class="input-actions-left">

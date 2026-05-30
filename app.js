@@ -21,7 +21,7 @@ const STATE = {
   webappUrl: savedWebappUrl,
   model: savedModel,
   theme: savedTheme,
-  currentImage: null, // Stores { base64: '', mimeType: '', name: '', size: '' }
+  currentImages: [], // Stores array of { base64: '', mimeType: '', name: '', size: '', dataUrl: '' }
   chatHistory: [], // To maintain context for standard chats
   useBackend: false,
   isSendingMessage: false,
@@ -44,9 +44,7 @@ const elements = {
   chatMessagesBox: document.getElementById('chat-messages-box'),
   imagePreviewPanel: document.getElementById('image-preview-panel'),
   btnCancelImage: document.getElementById('btn-cancel-image'),
-  imagePreviewThumbnail: document.getElementById('image-preview-thumbnail'),
-  previewFilename: document.getElementById('preview-filename'),
-  previewFilesize: document.getElementById('preview-filesize'),
+  previewBodyContainer: document.getElementById('preview-body-container'),
   fileUploader: document.getElementById('file-uploader'),
   btnUploadTrigger: document.getElementById('btn-upload-trigger'),
   textInput: document.getElementById('text-input'),
@@ -392,9 +390,12 @@ function setupEventListeners() {
     e.preventDefault();
     chatMessagesBox.classList.remove('drag-over-effect');
     if (e.dataTransfer.files.length > 0) {
-      const file = e.dataTransfer.files[0];
-      if (file.type.startsWith('image/')) {
-        processUploadedFile(file);
+      const files = Array.from(e.dataTransfer.files).filter(file => file.type.startsWith('image/'));
+      if (files.length > 0) {
+        processUploadedFiles(files.slice(0, 5));
+        if (e.dataTransfer.files.length > 5) {
+          appendAlertMessage('ระบบรองรับการส่งรูปภาพได้สูงสุดทีละ 5 รูปครับ (รูปส่วนเกินถูกตัดออก)', 'info');
+        }
       } else {
         appendAlertMessage('ขออภัยครับ ระบบรองรับเฉพาะไฟล์รูปภาพเท่านั้นครับ', 'error');
       }
@@ -455,42 +456,65 @@ function saveConfigurations() {
 // ==========================================================================
 function handleFileSelection(e) {
   if (e.target.files.length > 0) {
-    processUploadedFile(e.target.files[0]);
+    const files = Array.from(e.target.files).slice(0, 5);
+    processUploadedFiles(files);
+    if (e.target.files.length > 5) {
+      appendAlertMessage('ระบบรองรับการส่งรูปภาพได้สูงสุดทีละ 5 รูปครับ (รูปส่วนเกินถูกตัดออก)', 'info');
+    }
   }
 }
 
-function processUploadedFile(file) {
-  const reader = new FileReader();
-  reader.onload = (event) => {
-    const base64Data = event.target.result.split(',')[1];
-    const mimeType = file.type;
-    const name = file.name;
-    const sizeKB = (file.size / 1024).toFixed(1) + ' KB';
-    
-    // Save image to state
-    STATE.currentImage = {
-      base64: base64Data,
-      mimeType: mimeType,
-      name: name,
-      size: sizeKB,
-      dataUrl: event.target.result
+function processUploadedFiles(files) {
+  // Clear any existing preview
+  elements.previewBodyContainer.innerHTML = '';
+  STATE.currentImages = [];
+  
+  let loadedCount = 0;
+  
+  files.forEach(file => {
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const base64Data = event.target.result.split(',')[1];
+      const mimeType = file.type;
+      const name = file.name;
+      const sizeKB = (file.size / 1024).toFixed(1) + ' KB';
+      
+      const imgObject = {
+        base64: base64Data,
+        mimeType: mimeType,
+        name: name,
+        size: sizeKB,
+        dataUrl: event.target.result
+      };
+      
+      STATE.currentImages.push(imgObject);
+      
+      // Render thumbnail dynamically
+      const previewItem = document.createElement('div');
+      previewItem.style.cssText = 'display: flex; align-items: center; gap: 8px; background: rgba(255, 255, 255, 0.03); border: 1px solid var(--border-color); padding: 6px 10px; border-radius: var(--radius-sm); max-width: 220px;';
+      previewItem.innerHTML = `
+        <img src="${event.target.result}" style="width: 42px; height: 42px; object-fit: cover; border-radius: var(--radius-sm); border: 1px solid var(--border-color);" alt="Preview">
+        <div style="display: flex; flex-direction: column; overflow: hidden; min-width: 0;">
+          <span style="font-size: 11px; font-weight: 600; color: var(--text-primary); text-overflow: ellipsis; overflow: hidden; white-space: nowrap;">${name}</span>
+          <span style="font-size: 10px; color: var(--text-muted);">${sizeKB}</span>
+        </div>
+      `;
+      elements.previewBodyContainer.appendChild(previewItem);
+      
+      loadedCount++;
+      if (loadedCount === files.length) {
+        elements.imagePreviewPanel.classList.remove('hidden');
+        scrollToBottom();
+      }
     };
-    
-    // Show image preview in UI
-    elements.imagePreviewThumbnail.src = event.target.result;
-    elements.previewFilename.textContent = name;
-    elements.previewFilesize.textContent = sizeKB;
-    elements.imagePreviewPanel.classList.remove('hidden');
-    
-    // Scroll chat to bottom to see preview panel
-    scrollToBottom();
-  };
-  reader.readAsDataURL(file);
+    reader.readAsDataURL(file);
+  });
 }
 
 function removeImageAttachment() {
-  STATE.currentImage = null;
+  STATE.currentImages = [];
   elements.fileUploader.value = '';
+  elements.previewBodyContainer.innerHTML = '';
   elements.imagePreviewPanel.classList.add('hidden');
 }
 
@@ -788,13 +812,13 @@ async function handleFormSubmit(e) {
   e.preventDefault();
   
   const text = elements.textInput.value.trim();
-  const hasImage = STATE.currentImage !== null;
+  const hasImages = STATE.currentImages.length > 0;
   
   // Prevent sending empty requests
-  if (!text && !hasImage) return;
+  if (!text && !hasImages) return;
   
   // If sending an image, we require AI API Key and Sheets URL configurations
-  if (hasImage) {
+  if (hasImages) {
     if (!STATE.apiKey) {
       appendAlertMessage('กรุณากรอก **AI API Key** ในการตั้งค่าด้านซ้ายมือก่อนใช้งานนะครับ', 'error');
       return;
@@ -807,32 +831,35 @@ async function handleFormSubmit(e) {
   
   STATE.isSendingMessage = true;
   
+  // Keep values for processing and clear attachments immediately
+  const processingImages = [...STATE.currentImages];
+  removeImageAttachment();
+  
+  // Clear input area
+  elements.textInput.value = '';
+  autoResizeTextArea();
+  
   try {
-    // 1. Render User Message immediately in UI
-    const userText = text || `อัปโหลดรูปภาพ "${STATE.currentImage.name}" เพื่อวิเคราะห์และบันทึกข้อมูลเข้าร้านเติมเงิน`;
-    const imagePreviewUrl = hasImage ? STATE.currentImage.dataUrl : null;
-    appendMessage('user', userText, imagePreviewUrl);
-    
-    // Clear input area
-    elements.textInput.value = '';
-    autoResizeTextArea();
-    
-    // Keep values for processing
-    const processingImage = STATE.currentImage;
-    removeImageAttachment();
-    
-    if (processingImage) {
-      // IMAGE SCAN WORKFLOW (AI-Powered)
-      const typingIndicator = createTypingIndicator();
-      try {
-        await handleImageOcrWorkflow(userText, processingImage, typingIndicator);
-      } catch (error) {
-        console.error(error);
-        typingIndicator.remove();
+    if (processingImages.length > 0) {
+      // IMAGE SCAN WORKFLOW (AI-Powered, Sequential Queue)
+      for (let i = 0; i < processingImages.length; i++) {
+        const img = processingImages[i];
         
-        // Quota exceeded / high demand messages
-        if (error.message.includes('quota') || error.message.includes('Quota exceeded') || error.message.includes('429') || error.message.includes('exceeded your current quota')) {
-          appendAlertMessage(`
+        // Render User Message immediately in UI
+        const userText = text && i === 0 ? text : `อัปโหลดรูปภาพ "${img.name}" เพื่อวิเคราะห์และบันทึกข้อมูลเข้าร้านเติมเงิน`;
+        const imagePreviewUrl = img.dataUrl;
+        appendMessage('user', userText, imagePreviewUrl);
+        
+        const typingIndicator = createTypingIndicator();
+        try {
+          await handleImageOcrWorkflow(userText, img, typingIndicator);
+        } catch (error) {
+          console.error(error);
+          typingIndicator.remove();
+          
+          // Quota exceeded / high demand messages
+          if (error.message.includes('quota') || error.message.includes('Quota exceeded') || error.message.includes('429') || error.message.includes('exceeded your current quota')) {
+            appendAlertMessage(`
 **⚠️ โควต้าการใช้งานโมเดลเต็มชั่วคราว (Rate Limit / Quota Exceeded)**
 
 บัญชีแบบฟรีของ Gemini API (Free Tier) จะมีการจำกัดจำนวนครั้งในการส่งคำขอต่อนาที หรือโควต้าประจำวันของคุณเต็มแล้ว
@@ -840,9 +867,9 @@ async function handleFormSubmit(e) {
 **💡 วิธีการแก้ไขง่ายๆ:**
 1. โปรดรอประมาณ 30 วินาที ถึง 1 นาที แล้วทดลองส่งรูปภาพใหม่อีกครั้ง
 2. หรือแผงการตั้งค่าด้านซ้าย สลับประเภทโมเดลเป็น **Google: Gemini 1.5 Flash (โมเดลสำรอง)** ซึ่งเป็นรุ่นก่อนหน้าที่มีโควต้าการใช้งานแยกจากกัน ทำให้ทำงานประมวลผลต่อได้ทันทีครับ!
-          `, 'error');
-        } else if (error.message.includes('high demand') || error.message.includes('temporary') || error.message.includes('503') || error.message.includes('experiences')) {
-          appendAlertMessage(`
+            `, 'error');
+          } else if (error.message.includes('high demand') || error.message.includes('temporary') || error.message.includes('503') || error.message.includes('experiences')) {
+            appendAlertMessage(`
 **⚠️ โมเดลนี้กำลังมีผู้ใช้งานหนาแน่นชั่วคราว (High Demand / Spikes in Demand)**
 
 ขณะนี้โมเดลที่คุณเลือกมีผู้ใช้ทั่วโลกเข้าใช้งานพร้อมกันเป็นจำนวนมากทำให้ระบบฝั่งเซิร์ฟเวอร์เต็มชั่วคราว
@@ -850,13 +877,20 @@ async function handleFormSubmit(e) {
 **💡 วิธีการแก้ไขง่ายๆ:**
 1. สลับรุ่นโมเดล AI ในแผงตั้งค่าด้านซ้ายให้เป็น **Google: Gemini 1.5 Flash (โมเดลสำรอง)** ซึ่งเป็นรุ่นที่มีเครื่องเซิร์ฟเวอร์แยกต่างหากและมักจะไม่ค่อยเต็มครับ!
 2. หรือรอประมาณ 10-20 วินาทีแล้วลองกดส่งใหม่อีกครั้งครับ
-          `, 'error');
-        } else {
-          appendAlertMessage(`เกิดข้อผิดพลาดในการรันระบบ: ${error.message}`, 'error');
+            `, 'error');
+          } else {
+            appendAlertMessage(`เกิดข้อผิดพลาดในการวิเคราะห์สลิป "${img.name}": ${error.message}`, 'error');
+          }
+        }
+        
+        // Add a slight 200ms delay between sequential requests to prevent API rate limit congestion
+        if (i < processingImages.length - 1) {
+          await new Promise(r => setTimeout(r, 200));
         }
       }
     } else {
       // PURE TEXT CONVERSATION WORKFLOW (Pure Human-to-Human Live Chat!)
+      appendMessage('user', text, null);
       if (STATE.useBackend) {
         try {
           const response = await fetch('/api/chat', {
@@ -865,7 +899,7 @@ async function handleFormSubmit(e) {
               'Content-Type': 'application/json',
               'Authorization': sessionStorage.getItem('access_password') || ''
             },
-            body: JSON.stringify({ message: userText })
+            body: JSON.stringify({ message: text })
           });
           
           if (!response.ok) {
