@@ -922,6 +922,25 @@ a:hover {
   .chat-header .header-info {
     display: flex;
     align-items: center;
+    width: 100%;
+    min-width: 0;
+  }
+  
+  .chat-header .header-info > div {
+    min-width: 0;
+    flex: 1;
+  }
+  
+  .chat-header h1 {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  
+  .chat-header p {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
   
   .btn-sidebar-toggle {
@@ -1256,9 +1275,8 @@ a:hover {
   color: var(--text-primary);
   transition: var(--transition-smooth);
   box-shadow: var(--shadow-sm);
-  width: 380px; /* Width matching the premium card dimensions in screenshot */
-  max-width: 100%; /* Fully responsive on smaller devices! */
-  flex-shrink: 0;
+  width: 100%; 
+  max-width: 380px; 
 }
 
 .transaction-card:hover {
