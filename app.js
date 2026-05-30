@@ -73,6 +73,13 @@ const elements = {
 // APP INITIALIZATION
 // ==========================================================================
 document.addEventListener('DOMContentLoaded', () => {
+  // Register Service Worker for PWA support
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/service-worker.js')
+      .then(reg => console.log('Service Worker Registered Successfully!', reg))
+      .catch(err => console.log('Service Worker Registration Failed: ', err));
+  }
+
   // Load saved configurations into Inputs
   if (STATE.apiKey) elements.apiKeyInput.value = STATE.apiKey;
   if (STATE.webappUrl) elements.webappUrlInput.value = STATE.webappUrl;

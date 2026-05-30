@@ -980,6 +980,10 @@ a:hover {
   .chat-footer {
     padding: 16px 20px 20px;
   }
+  
+  .preview-panel {
+    margin: 0 15px;
+  }
 }
 
 /* 4. Small Mobile Screen dimensions (under 480px - iPhone SE / compact screens) */
@@ -1032,6 +1036,13 @@ a:hover {
   .msg-bubble {
     padding: 10px 14px;
     font-size: 13px;
+  }
+  
+  .footer-tip {
+    font-size: 9.5px;
+    flex-wrap: wrap;
+    line-height: 1.4;
+    padding: 0 5px;
   }
 }
 
