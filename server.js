@@ -481,10 +481,58 @@ app.post('/api/chat', checkAuth, async (req, res) => {
   }
 });
 
+// Endpoint: Save multi-image user message (Protected - groups multi-uploads side-by-side)
+app.post('/api/messages/user-images', checkAuth, async (req, res) => {
+  try {
+    const { images, userText } = req.body;
+    
+    if (!images || !Array.isArray(images) || images.length === 0) {
+      return res.status(400).json({ error: 'กรุณาแนบรูปภาพอย่างน้อย 1 รูป!' });
+    }
+
+    const savedPaths = [];
+    images.forEach(img => {
+      if (img.base64) {
+        const savedFilename = saveImageLocally(img.base64, img.mimeType);
+        if (savedFilename) {
+          savedPaths.push(`/uploads/${savedFilename}`);
+        }
+      }
+    });
+
+    const messages = loadMessages();
+    const userMsgId = 'msg_' + Date.now() + '_' + Math.floor(1000 + Math.random() * 9000);
+    
+    messages.push({
+      id: userMsgId,
+      sender: 'user',
+      username: req.user.username,
+      nickname: req.user.nickname || req.user.username,
+      profileImage: req.user.profileImage || '',
+      text: userText || `อัปโหลดรูปภาพจำนวน ${images.length} รูปเพื่อวิเคราะห์และบันทึกข้อมูลเข้าร้านเติมเงิน`,
+      imageSrc: savedPaths,
+      timestamp: Date.now()
+    });
+
+    saveMessages(messages);
+    broadcastMessageUpdate(); // Instant real-time sync for everyone
+
+    res.json({ 
+      status: 'success', 
+      messageId: userMsgId, 
+      imagePaths: savedPaths 
+    });
+
+  } catch (error) {
+    console.error('Multi-image user message error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Endpoint: Multimodal OCR & Sheets Upload (Protected)
 app.post('/api/ocr', checkAuth, async (req, res) => {
   try {
-    const { image, userText, model } = req.body;
+    const { image, userText, model, skipUserMessage, savedImagePath } = req.body;
     const isModelOpenai = model.startsWith('gpt');
     const apiKey = isModelOpenai ? process.env.OPENAI_API_KEY : process.env.GEMINI_API_KEY;
     const webappUrl = process.env.WEBAPP_URL;
@@ -493,29 +541,33 @@ app.post('/api/ocr', checkAuth, async (req, res) => {
       return res.status(400).json({ error: `เซิร์ฟเวอร์ยังไม่ได้ตั้งค่า API Key สำหรับรุ่น: ${model}` });
     }
 
-    // Save image locally if present
+    // Save image locally if present and not skipping user message
     let savedImageName = null;
-    if (image && image.base64) {
+    if (savedImagePath) {
+      savedImageName = savedImagePath.split('/').pop();
+    } else if (image && image.base64) {
       savedImageName = saveImageLocally(image.base64, image.mimeType);
     }
 
-    // 1. Save and broadcast user's OCR request message immediately
-    const chatMsgs = loadMessages();
-    const userMsgId = 'msg_' + Date.now() + '_' + Math.floor(1000 + Math.random() * 9000);
-    
-    chatMsgs.push({
-      id: userMsgId,
-      sender: 'user',
-      username: req.user.username,
-      nickname: req.user.nickname || req.user.username,
-      profileImage: req.user.profileImage || '',
-      text: userText || `อัปโหลดรูปภาพเพื่อวิเคราะห์และบันทึกข้อมูลเข้าร้านเติมเงิน`,
-      imageSrc: savedImageName ? `/uploads/${savedImageName}` : null,
-      timestamp: Date.now()
-    });
-    
-    saveMessages(chatMsgs);
-    broadcastMessageUpdate(); // Instant sync
+    if (!skipUserMessage) {
+      // 1. Save and broadcast user's OCR request message immediately
+      const chatMsgs = loadMessages();
+      const userMsgId = 'msg_' + Date.now() + '_' + Math.floor(1000 + Math.random() * 9000);
+      
+      chatMsgs.push({
+        id: userMsgId,
+        sender: 'user',
+        username: req.user.username,
+        nickname: req.user.nickname || req.user.username,
+        profileImage: req.user.profileImage || '',
+        text: userText || `อัปโหลดรูปภาพเพื่อวิเคราะห์และบันทึกข้อมูลเข้าร้านเติมเงิน`,
+        imageSrc: savedImageName ? `/uploads/${savedImageName}` : null,
+        timestamp: Date.now()
+      });
+      
+      saveMessages(chatMsgs);
+      broadcastMessageUpdate(); // Instant sync
+    }
 
     const systemPrompt = `
 คุณคือผู้ช่วย AI อัจฉริยะที่เชี่ยวชาญด้านการสกัดข้อความจากภาพสลิปโอนเงินหรือภาพประวัติการทำรายการเติมเกมออนไลน์

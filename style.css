@@ -1417,6 +1417,20 @@ a:hover {
 }
 
 /* Premium Image Thumbnail Styles in Chat */
+.chat-images-row-container {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 8px;
+  margin-bottom: 8px;
+}
+.chat-images-row-container .chat-image-thumbnail-container {
+  margin: 0;
+  flex-shrink: 0;
+  width: 130px;
+  height: 130px;
+}
 .chat-image-thumbnail-container {
   position: relative;
   max-width: 180px;

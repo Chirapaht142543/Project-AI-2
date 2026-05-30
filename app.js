@@ -589,15 +589,31 @@ function appendMessage(sender, text, imageSrc = null, transactions = null, msgOb
     
   let imageHtml = '';
   if (imageSrc) {
-    imageHtml = `
-      <div class="chat-image-thumbnail-container">
-        <img src="${imageSrc}" class="chat-image-thumbnail" alt="Uploaded Receipt" />
-        <div class="chat-image-hover-overlay">
-          <i class="fa-solid fa-magnifying-glass-plus"></i>
-          <span>คลิกเพื่อดูรูปใหญ่</span>
+    if (Array.isArray(imageSrc)) {
+      imageHtml = `
+        <div class="chat-images-row-container">
+          ${imageSrc.map(src => `
+            <div class="chat-image-thumbnail-container" data-src="${src}">
+              <img src="${src}" class="chat-image-thumbnail" alt="Uploaded Receipt" />
+              <div class="chat-image-hover-overlay">
+                <i class="fa-solid fa-magnifying-glass-plus"></i>
+                <span>คลิกเพื่อดูรูปใหญ่</span>
+              </div>
+            </div>
+          `).join('')}
         </div>
-      </div>
-    `;
+      `;
+    } else {
+      imageHtml = `
+        <div class="chat-image-thumbnail-container">
+          <img src="${imageSrc}" class="chat-image-thumbnail" alt="Uploaded Receipt" />
+          <div class="chat-image-hover-overlay">
+            <i class="fa-solid fa-magnifying-glass-plus"></i>
+            <span>คลิกเพื่อดูรูปใหญ่</span>
+          </div>
+        </div>
+      `;
+    }
   }
   
   let bubbleClass = 'msg-bubble';
@@ -641,11 +657,21 @@ function appendMessage(sender, text, imageSrc = null, transactions = null, msgOb
 
   // Bind programmatic click handler securely to avoid inline browser escaping issues
   if (imageSrc) {
-    const thumbnail = messageElement.querySelector('.chat-image-thumbnail-container');
-    if (thumbnail) {
-      thumbnail.addEventListener('click', () => {
-        openLightbox(imageSrc);
+    if (Array.isArray(imageSrc)) {
+      const thumbnails = messageElement.querySelectorAll('.chat-images-row-container .chat-image-thumbnail-container');
+      thumbnails.forEach(tn => {
+        const src = tn.getAttribute('data-src');
+        tn.addEventListener('click', () => {
+          openLightbox(src);
+        });
       });
+    } else {
+      const thumbnail = messageElement.querySelector('.chat-image-thumbnail-container');
+      if (thumbnail) {
+        thumbnail.addEventListener('click', () => {
+          openLightbox(imageSrc);
+        });
+      }
     }
   }
 
@@ -866,18 +892,49 @@ async function handleFormSubmit(e) {
   
   try {
     if (processingImages.length > 0) {
-      // IMAGE SCAN WORKFLOW (AI-Powered, Sequential Queue)
+      // IMAGE SCAN WORKFLOW (AI-Powered, Two-Phase Queue)
+      let savedPaths = [];
+      if (STATE.useBackend) {
+        try {
+          const userMsgText = text || `อัปโหลดรูปภาพจำนวน ${processingImages.length} รูปเพื่อวิเคราะห์และบันทึกข้อมูลเข้าร้านเติมเงิน`;
+          const uploadRes = await fetch('/api/messages/user-images', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': sessionStorage.getItem('access_password') || ''
+            },
+            body: JSON.stringify({
+              images: processingImages.map(img => ({ base64: img.base64, mimeType: img.mimeType })),
+              userText: userMsgText
+            })
+          });
+          
+          if (uploadRes.ok) {
+            const uploadResult = await uploadRes.json();
+            savedPaths = uploadResult.imagePaths || [];
+          } else {
+            console.error('Failed to pre-save multi-image user message');
+          }
+        } catch (uploadErr) {
+          console.error('Error pre-saving multi-image user message:', uploadErr);
+        }
+      } else {
+        // Local client-only fallback: render single user message immediately
+        const userMsgText = text || `อัปโหลดรูปภาพเพื่อวิเคราะห์และบันทึกข้อมูลเข้าร้านเติมเงิน`;
+        appendMessage('user', userMsgText, processingImages.map(img => img.dataUrl));
+      }
+
+      // Sequential AI OCR queue
       for (let i = 0; i < processingImages.length; i++) {
         const img = processingImages[i];
-        
-        // Render User Message immediately in UI
         const userText = text && i === 0 ? text : `อัปโหลดรูปภาพ "${img.name}" เพื่อวิเคราะห์และบันทึกข้อมูลเข้าร้านเติมเงิน`;
-        const imagePreviewUrl = img.dataUrl;
-        appendMessage('user', userText, imagePreviewUrl);
         
         const typingIndicator = createTypingIndicator();
         try {
-          await handleImageOcrWorkflow(userText, img, typingIndicator);
+          const skipUserMessage = STATE.useBackend;
+          const savedPath = savedPaths[i] || null;
+          
+          await handleImageOcrWorkflow(userText, img, typingIndicator, skipUserMessage, savedPath);
         } catch (error) {
           console.error(error);
           typingIndicator.remove();
@@ -943,7 +1000,7 @@ async function handleFormSubmit(e) {
 }
 
 // --- WORKFLOW A: Multimodal OCR & Sheets Upload ---
-async function handleImageOcrWorkflow(userText, imageObj, typingIndicator) {
+async function handleImageOcrWorkflow(userText, imageObj, typingIndicator, skipUserMessage = false, savedImagePath = null) {
   if (STATE.useBackend) {
     updateLoaderStatus(typingIndicator, `🔄 กำลังวิเคราะห์ข้อมูลผ่านเซิร์ฟเวอร์แบบปลอดภัย...`);
     try {
@@ -959,7 +1016,9 @@ async function handleImageOcrWorkflow(userText, imageObj, typingIndicator) {
             mimeType: imageObj.mimeType
           },
           userText: userText,
-          model: STATE.model
+          model: STATE.model,
+          skipUserMessage: skipUserMessage,
+          savedImagePath: savedImagePath
         })
       });
       
