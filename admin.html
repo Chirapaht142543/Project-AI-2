@@ -677,6 +677,21 @@
                 <p class="help-text" style="margin-top: 4px;">URL เว็บแอปพลิเคชันที่ได้จาก Apps Script ของ Google Sheets</p>
               </div>
 
+              <div class="input-wrapper">
+                <label for="admin-default-model">รุ่นโมเดล AI เริ่มต้น (Default Model)</label>
+                <div class="input-with-icon">
+                  <i class="fa-solid fa-brain icon"></i>
+                  <select id="admin-default-model" style="background: #111116;">
+                    <option value="gemini-2.5-flash">Google: Gemini 2.5 Flash (ฟรี & แนะนำ)</option>
+                    <option value="gemini-1.5-flash">Google: Gemini 1.5 Flash (ฟรี - บอตสำรอง)</option>
+                    <option value="gemini-1.5-pro">Google: Gemini 1.5 Pro (ฟรี - ประมวลผลละเอียด)</option>
+                    <option value="gpt-4o-mini">OpenAI: GPT-4o-mini (เสถียรสุดยอด - จ่ายถูกมาก)</option>
+                    <option value="gpt-4o">OpenAI: GPT-4o (แม่นยำสูงสุด - มีค่าใช้จ่าย)</option>
+                  </select>
+                </div>
+                <p class="help-text" style="margin-top: 4px;">รุ่นโมเดลหลักที่ใช้ในการวิเคราะห์ OCR และการพูดคุยกับผู้ใช้งาน</p>
+              </div>
+
               <button type="submit" class="btn btn-primary w-full" style="padding: 12px; margin-top: 10px;">
                 <i class="fa-solid fa-circle-check"></i> บันทึกการเชื่อมต่อ API
               </button>
@@ -822,6 +837,8 @@
 
       </div>
     </main>
+    <!-- Mobile Sidebar Overlay Backdrop -->
+    <div class="sidebar-overlay" id="sidebar-overlay" onclick="toggleSidebar(event)"></div>
   </div>
 
   <!-- MODAL: View Slip Image -->
@@ -1348,6 +1365,7 @@
           document.getElementById('admin-gemini-key').value = config.GEMINI_API_KEY;
           document.getElementById('admin-openai-key').value = config.OPENAI_API_KEY;
           document.getElementById('admin-webapp-url').value = config.WEBAPP_URL;
+          document.getElementById('admin-default-model').value = config.DEFAULT_MODEL || 'gemini-2.5-flash';
           document.getElementById('admin-auto-delete-period').value = config.AUTO_DELETE_PERIOD || 'disabled';
         }
       } catch (e) {
@@ -1415,13 +1433,14 @@
       const GEMINI_API_KEY = document.getElementById('admin-gemini-key').value;
       const OPENAI_API_KEY = document.getElementById('admin-openai-key').value;
       const WEBAPP_URL = document.getElementById('admin-webapp-url').value;
+      const DEFAULT_MODEL = document.getElementById('admin-default-model').value;
       const AUTO_DELETE_PERIOD = document.getElementById('admin-auto-delete-period').value;
 
       try {
         const res = await fetch('/api/admin/save-config', {
           method: 'POST',
           headers: getAuthHeaders(),
-          body: JSON.stringify({ GEMINI_API_KEY, OPENAI_API_KEY, WEBAPP_URL, AUTO_DELETE_PERIOD })
+          body: JSON.stringify({ GEMINI_API_KEY, OPENAI_API_KEY, WEBAPP_URL, DEFAULT_MODEL, AUTO_DELETE_PERIOD })
         });
 
         if (res.ok) {
@@ -1450,13 +1469,14 @@
       const GEMINI_API_KEY = document.getElementById('admin-gemini-key').value;
       const OPENAI_API_KEY = document.getElementById('admin-openai-key').value;
       const WEBAPP_URL = document.getElementById('admin-webapp-url').value;
+      const DEFAULT_MODEL = document.getElementById('admin-default-model').value;
       const AUTO_DELETE_PERIOD = document.getElementById('admin-auto-delete-period').value;
 
       try {
         const res = await fetch('/api/admin/save-config', {
           method: 'POST',
           headers: getAuthHeaders(),
-          body: JSON.stringify({ GEMINI_API_KEY, OPENAI_API_KEY, WEBAPP_URL, AUTO_DELETE_PERIOD })
+          body: JSON.stringify({ GEMINI_API_KEY, OPENAI_API_KEY, WEBAPP_URL, DEFAULT_MODEL, AUTO_DELETE_PERIOD })
         });
 
         if (res.ok) {
@@ -1864,7 +1884,5 @@
       }
     });
   </script>
-  <!-- Mobile Sidebar Overlay Backdrop -->
-  <div class="sidebar-overlay" id="sidebar-overlay" onclick="toggleSidebar(event)"></div>
 </body>
 </html>
