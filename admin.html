@@ -1,0 +1,1870 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MT-TOPUP AI - ระบบจัดการหลังบ้าน</title>
+  <!-- Google Fonts: Outfit, Inter & Sarabun -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- Custom Style -->
+  <link rel="stylesheet" href="style.css">
+  <style>
+    body {
+      background-color: #0a0a0f;
+      height: 100vh;
+      width: 100vw;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      overflow: hidden;
+      position: relative;
+    }
+    .admin-container {
+      display: flex;
+      width: 100vw;
+      height: 100vh;
+      max-width: 100%;
+      background: var(--bg-glass);
+      backdrop-filter: blur(20px) saturate(180%);
+      -webkit-backdrop-filter: blur(20px) saturate(180%);
+      border: none;
+      border-radius: 0;
+      box-shadow: none;
+      z-index: 10;
+      overflow: hidden;
+    }
+    
+    /* Admin Navigation */
+    .admin-nav {
+      width: 280px;
+      border-right: 1px solid var(--border-color);
+      background: rgba(10, 10, 15, 0.35);
+      display: flex;
+      flex-direction: column;
+    }
+    .admin-nav-header {
+      padding: 24px;
+      border-bottom: 1px solid var(--border-color);
+    }
+    .admin-nav-menu {
+      flex: 1;
+      padding: 20px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 16px;
+      border-radius: var(--radius-sm);
+      color: var(--text-secondary);
+      font-weight: 500;
+      font-size: 14px;
+      cursor: pointer;
+      transition: var(--transition-smooth);
+    }
+    .nav-item:hover, .nav-item.active {
+      background: rgba(255, 255, 255, 0.05);
+      color: var(--text-primary);
+    }
+    .nav-item.active {
+      background: rgba(99, 102, 241, 0.15);
+      border-left: 3px solid var(--accent-primary);
+      color: var(--accent-secondary);
+    }
+    
+    /* Content Panels */
+    .admin-main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      background: rgba(10, 10, 15, 0.05);
+    }
+    .admin-header {
+      padding: 20px 30px;
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .admin-header h1 {
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--text-primary);
+    }
+    .admin-content {
+      flex: 1;
+      padding: 24px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      scrollbar-width: none; /* Firefox */
+      -ms-overflow-style: none; /* IE/Edge */
+    }
+    .admin-content::-webkit-scrollbar {
+      display: none; /* Chrome, Safari, Opera */
+    }
+    
+    /* Stats Widgets */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 20px;
+    }
+    .stat-card {
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      padding: 20px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      box-shadow: var(--shadow-sm);
+      transition: var(--transition-smooth);
+    }
+    .stat-card:hover {
+      transform: translateY(-2px);
+      border-color: var(--accent-primary);
+    }
+    .stat-icon {
+      width: 48px;
+      height: 48px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      color: white;
+    }
+    .stat-icon.revenue { background: linear-gradient(135deg, #10b981 0%, #059669 100%); }
+    .stat-icon.slips { background: linear-gradient(135deg, #6366f1 0%, #06b6d4 100%); }
+    .stat-icon.users { background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); }
+    
+    .stat-info { display: flex; flex-direction: column; gap: 4px; }
+    .stat-value { font-size: 22px; font-weight: 700; color: var(--text-primary); }
+    .stat-label { font-size: 12px; color: var(--text-secondary); }
+    
+    /* Responsive Table Styles */
+    .table-container {
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      overflow-x: auto;
+      overflow-y: auto; /* Enable vertical scrolling */
+      flex: 1; /* Automatically stretch to fill the remaining screen height dynamically */
+      min-height: 250px;
+      box-shadow: var(--shadow-sm);
+      position: relative;
+    }
+    
+    /* Custom scrollbar for table container to make it super premium */
+    .table-container::-webkit-scrollbar {
+      width: 6px; /* Vertical scrollbar width */
+      height: 6px; /* Horizontal scrollbar height */
+    }
+    .table-container::-webkit-scrollbar-track {
+      background: rgba(255, 255, 255, 0.02);
+      border-radius: 10px;
+    }
+    .table-container::-webkit-scrollbar-thumb {
+      background: var(--border-color-glow);
+      border-radius: 10px;
+      transition: var(--transition-smooth);
+    }
+    .table-container::-webkit-scrollbar-thumb:hover {
+      background: var(--accent-secondary);
+    }
+
+    table {
+      width: 100%;
+      min-width: 950px;
+      border-collapse: collapse;
+      text-align: left;
+      font-size: 13px;
+    }
+    th, td {
+      padding: 14px 18px;
+      border-bottom: 1px solid var(--border-color);
+      white-space: nowrap;
+    }
+    th {
+      position: sticky; /* Make headers sticky! */
+      top: 0;
+      z-index: 10;
+      background: #111116; /* Solid dark color matching dark dashboard theme to hide scrolling content */
+      font-weight: 600;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      font-size: 11px;
+      letter-spacing: 0.5px;
+      border-bottom: 1px solid var(--border-color);
+    }
+    td { color: var(--text-primary); }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: rgba(255, 255, 255, 0.01); }
+    
+    /* Badge Status */
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 8px;
+      border-radius: 12px;
+      font-size: 11px;
+      font-weight: 600;
+    }
+    .badge.success { background: rgba(16, 185, 129, 0.1); color: #6ee7b7; border: 1px solid rgba(16, 185, 129, 0.2); }
+    .badge.error { background: rgba(239, 68, 68, 0.1); color: #fca5a5; border: 1px solid rgba(239, 68, 68, 0.2); }
+    .badge.info { background: rgba(59, 130, 246, 0.1); color: #93c5fd; border: 1px solid rgba(59, 130, 246, 0.2); }
+    
+    /* Split Panels */
+    .split-grid {
+      display: grid;
+      grid-template-columns: 1.3fr 1fr;
+      gap: 30px;
+    }
+    @media (max-width: 900px) {
+      .split-grid { grid-template-columns: 1fr; }
+    }
+    
+    /* Form additions */
+    .form-card {
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid var(--border-color);
+      padding: 24px;
+      border-radius: var(--radius-md);
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+    .form-card h3 {
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--text-primary);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      border-bottom: 1px solid var(--border-color);
+      padding-bottom: 12px;
+      margin-bottom: 5px;
+    }
+    
+    /* Action Buttons */
+    .btn-table-action {
+      background: none;
+      border: none;
+      color: var(--color-danger);
+      cursor: pointer;
+      padding: 6px;
+      border-radius: var(--radius-sm);
+      transition: var(--transition-smooth);
+    }
+    .btn-table-action:hover {
+      background: rgba(239, 68, 68, 0.1);
+      transform: scale(1.1);
+    }
+
+    /* Menu Toggle Button Style (Hidden by default on Desktop) */
+    .menu-toggle {
+      display: none;
+      align-items: center;
+      justify-content: center;
+      width: 40px;
+      height: 40px;
+      border-radius: var(--radius-sm);
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid var(--border-color);
+      color: var(--text-primary);
+      cursor: pointer;
+      font-size: 16px;
+      transition: var(--transition-smooth);
+      flex-shrink: 0;
+    }
+    .menu-toggle:hover {
+      background: rgba(255, 255, 255, 0.08);
+      border-color: var(--accent-secondary);
+    }
+
+    /* Responsive Media Queries for All Dimensions */
+    @media (max-width: 768px) {
+      body {
+        overflow: auto !important;
+        height: auto !important;
+        width: 100% !important;
+      }
+      .admin-container {
+        flex-direction: column !important;
+        height: auto !important;
+        min-height: 100vh !important;
+        overflow: visible !important;
+      }
+      
+      /* Sidebar slide-out on mobile */
+      .admin-nav {
+        position: fixed;
+        left: -280px;
+        top: 0;
+        bottom: 0;
+        z-index: 1000;
+        height: 100%;
+        width: 280px;
+        background: #0b0b10;
+        border-right: 1px solid var(--border-color);
+        box-shadow: 5px 0 25px rgba(0,0,0,0.5);
+        transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      }
+      .admin-nav.open {
+        left: 0;
+      }
+      
+      /* Overlay under open sidebar */
+      .sidebar-overlay {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.6);
+        backdrop-filter: blur(4px);
+        -webkit-backdrop-filter: blur(4px);
+        z-index: 999;
+      }
+      .sidebar-overlay.active {
+        display: block;
+      }
+      
+      .admin-main {
+        height: auto !important;
+        min-height: 100vh !important;
+        overflow: visible !important;
+        width: 100% !important;
+      }
+      .admin-content {
+        padding: 15px !important;
+        gap: 15px !important;
+        overflow: visible !important;
+      }
+      
+      /* Adjust Header */
+      .admin-header {
+        padding: 15px !important;
+        gap: 10px !important;
+        flex-direction: row !important;
+        align-items: center !important;
+        justify-content: space-between !important;
+      }
+      .admin-header h1 {
+        font-size: 16px !important;
+      }
+      
+      /* Menu Toggle Button display */
+      .menu-toggle {
+        display: flex !important;
+      }
+      
+      /* Stats Grid adaptation */
+      .stats-grid {
+        grid-template-columns: 1fr !important;
+        gap: 12px !important;
+      }
+      
+      /* Filter bar wrapping */
+      .settings-group {
+        flex-direction: column !important;
+        align-items: stretch !important;
+        padding: 15px !important;
+      }
+      .settings-group > div:nth-child(2) {
+        flex-direction: column !important;
+        align-items: stretch !important;
+        width: 100% !important;
+        gap: 10px !important;
+      }
+      .settings-group input, .settings-group select, .settings-group button {
+        width: 100% !important;
+      }
+      .settings-group div {
+        justify-content: space-between !important;
+      }
+      
+      /* Table adaptation */
+      .table-container {
+        overflow-x: auto !important;
+        overflow-y: visible !important;
+        min-height: auto !important;
+        max-height: none !important;
+        flex: none !important;
+      }
+      
+      /* Pagination adapt */
+      .pagination-container {
+        flex-direction: column !important;
+        gap: 12px !important;
+        align-items: center !important;
+        text-align: center !important;
+      }
+    }
+
+    /* Circular Avatar Upload Premium Styles */
+    .avatar-preview-wrapper {
+      position: relative;
+      width: 100px;
+      height: 100px;
+      border-radius: 50%;
+      border: 2px solid var(--border-color-glow);
+      background: rgba(0,0,0,0.3);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      cursor: pointer;
+      transition: var(--transition-smooth);
+    }
+    .avatar-preview-wrapper img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    .avatar-upload-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0,0,0,0.6);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      transition: var(--transition-smooth);
+      border-radius: 50%;
+    }
+    .avatar-preview-wrapper:hover .avatar-upload-overlay {
+      opacity: 1;
+    }
+    .avatar-preview-wrapper:hover {
+      border-color: var(--accent-secondary);
+      transform: scale(1.05);
+    }
+  </style>
+  <script>
+    // Fast Client-side RBAC Protection Check
+    const token = sessionStorage.getItem('access_password');
+    const role = sessionStorage.getItem('access_role');
+    if (!token || (role !== 'head-admin' && role !== 'operator')) {
+      alert('⚠️ คุณไม่มีสิทธิ์ในการเข้าใช้งานแผงควบคุมนี้!');
+      window.location.href = '/';
+    }
+  </script>
+</head>
+<body class="dark-theme">
+  <!-- Glowing neon background -->
+  <div class="bg-glow-1"></div>
+  <div class="bg-glow-2"></div>
+
+  <div class="admin-container">
+    
+    <!-- LEFT SIDEBAR MENU -->
+    <aside class="admin-nav">
+      <div class="admin-nav-header">
+        <div class="logo">
+          <img src="logo.png" class="logo-img" alt="MT-TOPUP AI Logo">
+          <span>MT-TOPUP <span class="gradient-text font-bold">AI</span></span>
+        </div>
+      </div>
+      <nav class="admin-nav-menu">
+        <div class="nav-item active" onclick="switchTab('tab-dashboard', this)">
+          <i class="fa-solid fa-chart-line"></i> แผงควบคุมธุรกรรม
+        </div>
+        <div class="nav-item" onclick="switchTab('tab-config', this)">
+          <i class="fa-solid fa-sliders"></i> ตั้งค่า API & ระบบ
+        </div>
+        <div class="nav-item" onclick="switchTab('tab-accounts', this)">
+          <i class="fa-solid fa-users-gear"></i> จัดการบัญชีสมาชิก
+        </div>
+      </nav>
+      <div class="sidebar-footer" style="border-top: 1px solid var(--border-color); padding: 16px 20px; display: flex; flex-direction: column; gap: 8px;">
+        <a href="/" class="btn btn-secondary w-full" style="font-size: 13px;">
+          <i class="fa-solid fa-comments"></i> กลับหน้าแชทบอต
+        </a>
+        <button id="btn-admin-logout" class="btn btn-icon-label text-danger w-full" style="font-size: 11px; padding: 8px 12px; border-color: rgba(239, 68, 68, 0.25) !important; flex: none;">
+          <i class="fa-solid fa-right-from-bracket"></i> ออกจากระบบ
+        </button>
+      </div>
+    </aside>
+
+    <!-- MAIN DASHBOARD CONTENT AREA -->
+    <main class="admin-main">
+      <header class="admin-header">
+        <div style="display: flex; align-items: center; gap: 12px;">
+          <!-- Menu Toggle Button for Mobile -->
+          <button class="menu-toggle" onclick="toggleSidebar(event)" title="เปิดเมนูนำทาง">
+            <i class="fa-solid fa-bars"></i>
+          </button>
+          <div>
+            <h1 id="panel-title" style="margin: 0;">สรุปภาพรวมและประวัติธุรกรรม</h1>
+            <p style="font-size: 12px; color: var(--text-secondary); margin-top: 4px; margin-bottom: 0;">ยินดีต้อนรับผู้ดูแลระบบ: <strong id="admin-user-display" style="color: var(--accent-secondary);">Admin</strong></p>
+          </div>
+        </div>
+        <div>
+          <button onclick="refreshDashboard()" class="btn btn-secondary text-sm">
+            <i class="fa-solid fa-rotate"></i> รีเฟรชข้อมูล
+          </button>
+        </div>
+      </header>
+
+      <div class="admin-content">
+        
+        <!-- ===================================================================
+             TAB 1: DASHBOARD & TRANSACTIONS
+             =================================================================== -->
+        <section id="tab-dashboard" class="tab-panel">
+          <div class="stats-grid">
+            <div class="stat-card">
+              <div class="stat-icon slips"><i class="fa-solid fa-receipt"></i></div>
+              <div class="stat-info">
+                <span id="stat-total-slips" class="stat-value">0</span>
+                <span class="stat-label">รายการวิเคราะห์สลิปทั้งหมด</span>
+              </div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-icon revenue"><i class="fa-solid fa-coins"></i></div>
+              <div class="stat-info">
+                <span id="stat-total-revenue" class="stat-value">0 บาท</span>
+                <span class="stat-label">ยอดขาย/รายได้รวมทั้งหมด</span>
+              </div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-icon users"><i class="fa-solid fa-user-check"></i></div>
+              <div class="stat-info">
+                <span id="stat-active-users" class="stat-value">0</span>
+                <span class="stat-label">จำนวนพนักงานผู้ใช้งาน</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Filter Bar -->
+          <div class="settings-group" style="margin-top: 25px; display: flex; flex-direction: row; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 15px; padding: 15px 20px;">
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <h3 style="font-size: 14px; font-weight: 600; text-transform: uppercase; color: var(--text-secondary); margin: 0; display: inline-flex; align-items: center; gap: 6px;">
+                <i class="fa-solid fa-filter" style="color: var(--accent-secondary);"></i> กรองตามวันเวลาทำรายการ
+              </h3>
+            </div>
+            <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+              <div style="display: flex; align-items: center; gap: 6px;">
+                <span style="font-size: 12px; color: var(--text-secondary);">เริ่มต้น:</span>
+                <input type="datetime-local" id="filter-date-start" style="width: 195px; padding: 6px 10px; background: rgba(0, 0, 0, 0.2); border: 1px solid var(--border-color); border-radius: var(--radius-sm); color: var(--text-primary); font-size: 12px; outline: none; transition: var(--transition-smooth);">
+              </div>
+              <div style="display: flex; align-items: center; gap: 6px;">
+                <span style="font-size: 12px; color: var(--text-secondary);">สิ้นสุด:</span>
+                <input type="datetime-local" id="filter-date-end" style="width: 195px; padding: 6px 10px; background: rgba(0, 0, 0, 0.2); border: 1px solid var(--border-color); border-radius: var(--radius-sm); color: var(--text-primary); font-size: 12px; outline: none; transition: var(--transition-smooth);">
+              </div>
+              <div style="display: flex; align-items: center; gap: 6px;">
+                <span style="font-size: 12px; color: var(--text-secondary);">จำนวนรายการ:</span>
+                <select id="filter-limit" onchange="applyFilters()" style="width: 75px; padding: 6px 10px; background: rgba(0, 0, 0, 0.2); border: 1px solid var(--border-color); border-radius: var(--radius-sm); color: var(--text-primary); font-size: 12px; outline: none; transition: var(--transition-smooth); cursor: pointer;">
+                  <option value="8" selected style="background-color: #111116;">8</option>
+                  <option value="10" style="background-color: #111116;">10</option>
+                  <option value="20" style="background-color: #111116;">20</option>
+                  <option value="30" style="background-color: #111116;">30</option>
+                  <option value="50" style="background-color: #111116;">50</option>
+                  <option value="100" style="background-color: #111116;">100</option>
+                  <option value="200" style="background-color: #111116;">200</option>
+                </select>
+              </div>
+              <button onclick="applyFilters()" class="btn btn-primary text-sm" style="padding: 6px 14px; font-size: 12px; height: 32px;">
+                <i class="fa-solid fa-magnifying-glass"></i> กรองข้อมูล
+              </button>
+              <button onclick="clearFilters()" class="btn btn-secondary text-sm" style="padding: 6px 12px; font-size: 12px; height: 32px;">
+                <i class="fa-solid fa-filter-circle-xmark"></i> ล้างค่า
+              </button>
+            </div>
+          </div>
+
+          <h3 style="font-size: 15px; font-weight: 600; margin: 25px 0 12px 0;"><i class="fa-solid fa-list-check"></i> ประวัติรายการสแกนสลิปล่าสุด (ฐานข้อมูลหลังบ้าน)</h3>
+          
+          <div class="table-container">
+            <table>
+              <thead>
+                <tr>
+                  <th>วันที่นำเข้า</th>
+                  <th>วันที่ในรูปภาพ</th>
+                  <th>เกม</th>
+                  <th>UID ผู้เล่น</th>
+                  <th>แพ็กเกจ</th>
+                  <th>ยอดเงิน</th>
+                  <th>สถานะสลิป</th>
+                  <th>Google Sheet</th>
+                  <th style="text-align: center;">รูปสลิป</th>
+                  <th style="text-align: center; width: 60px;">จัดการ</th>
+                </tr>
+              </thead>
+              <tbody id="transactions-tbody">
+                <tr>
+                  <td colspan="10" style="text-align: center; color: var(--text-muted); padding: 30px;">
+                    <i class="fa-solid fa-spinner fa-spin"></i> กำลังโหลดประวัติรายการ...
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          
+          <!-- Pagination Controls -->
+          <div class="pagination-container" style="display: flex; align-items: center; justify-content: space-between; margin-top: 15px; padding: 10px 15px; background: rgba(255, 255, 255, 0.02); border: 1px solid var(--border-color); border-radius: var(--radius-sm);">
+            <div style="font-size: 12px; color: var(--text-secondary);">
+              แสดงรายการที่ <span id="page-start-idx" style="color: var(--accent-secondary); font-weight: 600;">0</span> ถึง <span id="page-end-idx" style="color: var(--accent-secondary); font-weight: 600;">0</span> จากทั้งหมด <span id="page-total-count" style="color: var(--accent-secondary); font-weight: 600;">0</span> รายการ
+            </div>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <button id="btn-prev-page" onclick="changePage(-1)" class="btn btn-secondary" style="padding: 6px 12px; font-size: 12px; display: inline-flex; align-items: center; gap: 4px;" disabled>
+                <i class="fa-solid fa-angle-left"></i> ก่อนหน้า
+              </button>
+              <span style="font-size: 12px; color: var(--text-primary); font-weight: 500;">
+                หน้า <span id="current-page-num" style="color: var(--accent-secondary); font-weight: 600;">1</span> / <span id="total-pages-num" style="color: var(--text-secondary);">1</span>
+              </span>
+              <button id="btn-next-page" onclick="changePage(1)" class="btn btn-secondary" style="padding: 6px 12px; font-size: 12px; display: inline-flex; align-items: center; gap: 4px;" disabled>
+                ถัดไป <i class="fa-solid fa-angle-right"></i>
+              </button>
+            </div>
+          </div>
+        </section>
+
+        <!-- ===================================================================
+             TAB 2: CONFIGURATION & API KEYS
+             =================================================================== -->
+        <section id="tab-config" class="tab-panel hidden" style="max-width: 1200px; width: 100%; margin: 0 auto;">
+          <div class="split-grid">
+            
+            <!-- Box 1: API Settings Form -->
+            <form id="config-form" class="form-card">
+              <h3><i class="fa-solid fa-sliders"></i> ตั้งค่ารหัสลับ & การเชื่อมต่อเชื่อมชีตหลังบ้าน</h3>
+              
+              <div class="input-wrapper">
+                <label for="admin-gemini-key">Google Gemini API Key</label>
+                <div class="input-with-icon">
+                  <i class="fa-solid fa-key icon"></i>
+                  <input type="password" id="admin-gemini-key" placeholder="คีย์ AI Gemini สำหรับเรียกวิเคราะห์ภาพใบเสร็จฟรี...">
+                  <button type="button" class="btn-toggle-password" onclick="togglePasswordVisibility('admin-gemini-key')">
+                    <i class="fa-solid fa-eye-slash"></i>
+                  </button>
+                </div>
+              </div>
+
+              <div class="input-wrapper">
+                <label for="admin-openai-key">OpenAI API Key (ตัวเลือกเสริม)</label>
+                <div class="input-with-icon">
+                  <i class="fa-solid fa-key icon"></i>
+                  <input type="password" id="admin-openai-key" placeholder="คีย์ OpenAI API (เช่น GPT-4o-mini)...">
+                  <button type="button" class="btn-toggle-password" onclick="togglePasswordVisibility('admin-openai-key')">
+                    <i class="fa-solid fa-eye-slash"></i>
+                  </button>
+                </div>
+              </div>
+
+              <div class="input-wrapper">
+                <label for="admin-webapp-url">Google Sheets Web App URL</label>
+                <div class="input-with-icon">
+                  <i class="fa-solid fa-table icon"></i>
+                  <input type="url" id="admin-webapp-url" placeholder="https://script.google.com/macros/s/.../exec">
+                </div>
+                <p class="help-text" style="margin-top: 4px;">URL เว็บแอปพลิเคชันที่ได้จาก Apps Script ของ Google Sheets</p>
+              </div>
+
+              <button type="submit" class="btn btn-primary w-full" style="padding: 12px; margin-top: 10px;">
+                <i class="fa-solid fa-circle-check"></i> บันทึกการเชื่อมต่อ API
+              </button>
+            </form>
+
+            <!-- Box 2: Auto-Cleanup Form -->
+            <form id="cleanup-form" class="form-card">
+              <h3><i class="fa-solid fa-trash-can" style="color: var(--color-danger);"></i> ระบบลบประวัติและสลิปอัตโนมัติ</h3>
+              
+              <div class="input-wrapper">
+                <label for="admin-auto-delete-period">ช่วงเวลารอการลบประวัติ (Auto-Cleanup Period)</label>
+                <div class="input-with-icon">
+                  <i class="fa-solid fa-trash-can icon"></i>
+                  <select id="admin-auto-delete-period" style="background: #111116;">
+                    <option value="disabled">ปิดการใช้งานลบประวัติอัตโนมัติ</option>
+                    <optgroup label="หน่วย: นาที" style="background-color: #111116; color: var(--text-secondary);">
+                      <option value="15m">ลบรายการที่เก่ากว่า 15 นาที (สำหรับทดสอบ)</option>
+                      <option value="30m">ลบรายการที่เก่ากว่า 30 นาที</option>
+                    </optgroup>
+                    <optgroup label="หน่วย: ชั่วโมง" style="background-color: #111116; color: var(--text-secondary);">
+                      <option value="1h">ลบรายการที่เก่ากว่า 1 ชั่วโมง</option>
+                      <option value="2h">ลบรายการที่เก่ากว่า 2 ชั่วโมง</option>
+                      <option value="6h">ลบรายการที่เก่ากว่า 6 ชั่วโมง</option>
+                      <option value="12h">ลบรายการที่เก่ากว่า 12 ชั่วโมง</option>
+                    </optgroup>
+                    <optgroup label="หน่วย: วัน / เดือน" style="background-color: #111116; color: var(--text-secondary);">
+                      <option value="1d">ลบรายการที่เก่ากว่า 1 วัน</option>
+                      <option value="7d">ลบรายการที่เก่ากว่า 7 วัน</option>
+                      <option value="1M">ลบรายการที่เก่ากว่า 1 เดือน (แนะนำ)</option>
+                      <option value="3M">ลบรายการที่เก่ากว่า 3 เดือน</option>
+                      <option value="6M">ลบรายการที่เก่ากว่า 6 เดือน</option>
+                      <option value="12M">ลบรายการที่เก่ากว่า 1 ปี</option>
+                    </optgroup>
+                  </select>
+                </div>
+                <p class="help-text" style="margin-top: 4px;">เมื่อครบกำหนดเวลา ระบบหลังบ้านจะทำการเคลียร์ข้อมูลในฐานข้อมูลและลบภาพสลิปใบเสร็จบนดิสก์ออกโดยถาวร เพื่อช่วยประหยัดพื้นที่จัดเก็บข้อมูลบนโฮสติ้ง</p>
+              </div>
+
+              <button type="submit" class="btn btn-primary w-full" style="padding: 12px; margin-top: 10px; background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%) !important; border-color: rgba(239, 68, 68, 0.4) !important;">
+                <i class="fa-solid fa-circle-check"></i> บันทึกค่าลบข้อมูลอัตโนมัติ
+              </button>
+            </form>
+
+          </div>
+        </section>
+
+        <!-- ===================================================================
+             TAB 3: ACCOUNT & USER MANAGEMENT (DUAL ROLE-BASED VIEW)
+             =================================================================== -->
+        <section id="tab-accounts" class="tab-panel hidden" style="max-width: 1000px; margin: 0 auto; width: 100%;">
+          
+          <!-- View 1: Head Admin view -->
+          <div id="head-admin-accounts-section" class="hidden">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; gap: 15px; flex-wrap: wrap;">
+              <h3 style="font-size: 15px; font-weight: 600; margin: 0; display: inline-flex; align-items: center; gap: 8px;">
+                <i class="fa-solid fa-users" style="color: var(--accent-secondary);"></i> บัญชีผู้ใช้ที่มีสิทธิ์ในระบบ
+              </h3>
+              <button onclick="openAddAccountModal()" class="btn btn-primary text-sm" style="padding: 8px 16px; font-size: 13px; display: inline-flex; align-items: center; gap: 8px; height: 38px;">
+                <i class="fa-solid fa-user-plus"></i> เพิ่มสมาชิก / พนักงานใหม่
+              </button>
+            </div>
+            
+            <div class="table-container">
+              <table>
+                <thead>
+                  <tr>
+                    <th style="width: 70px; text-align: center;">รูปโปรไฟล์</th>
+                    <th>ชื่อผู้ใช้ (Username)</th>
+                    <th>ชื่อเล่น (Nickname)</th>
+                    <th>สิทธิ์การเข้าใช้งาน (Role)</th>
+                    <th style="width: 120px; text-align: center;">จัดการ</th>
+                  </tr>
+                </thead>
+                <tbody id="accounts-tbody">
+                  <tr>
+                    <td colspan="5" style="text-align: center; color: var(--text-muted); padding: 30px;">
+                      <i class="fa-solid fa-spinner fa-spin"></i> กำลังโหลดรายชื่อ...
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- View 2: Operator Profile Form -->
+          <div id="operator-profile-container" class="hidden" style="max-width: 500px; margin: 0 auto;">
+            <form id="operator-profile-form" class="form-card" style="gap: 16px;">
+              <h3><i class="fa-solid fa-user-gear" style="color: var(--accent-secondary);"></i> แก้ไขโปรไฟล์ส่วนตัว</h3>
+              
+              <!-- Avatar Upload with custom premium UI -->
+              <div class="avatar-upload-container" style="display: flex; flex-direction: column; align-items: center; gap: 10px; margin-bottom: 10px;">
+                <div class="avatar-preview-wrapper" onclick="triggerAvatarUpload('operator-avatar-file')" style="position: relative; width: 100px; height: 100px; border-radius: 50%; border: 2px solid var(--border-color-glow); background: rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center; overflow: hidden; cursor: pointer; transition: var(--transition-smooth);">
+                  <img id="operator-avatar-preview" src="" style="width: 100%; height: 100%; object-fit: cover; display: none;" />
+                  <i id="operator-avatar-placeholder" class="fa-solid fa-user-tie" style="font-size: 40px; color: var(--text-secondary);"></i>
+                  <div class="avatar-upload-overlay" style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center; opacity: 0; transition: var(--transition-smooth); border-radius: 50%;">
+                    <i class="fa-solid fa-camera" style="color: white; font-size: 20px;"></i>
+                  </div>
+                </div>
+                <input type="file" id="operator-avatar-file" accept="image/*" style="display: none;" onchange="handleAvatarFileChange(this, 'operator-avatar-preview', 'operator-avatar-placeholder', 'operator-clear-avatar-btn')" />
+                <div style="display: flex; gap: 8px;">
+                  <button type="button" class="btn btn-secondary text-sm" style="padding: 4px 10px; font-size: 11px; height: 26px;" onclick="triggerAvatarUpload('operator-avatar-file')">
+                    <i class="fa-solid fa-upload"></i> อัปโหลดรูปภาพ
+                  </button>
+                  <button id="operator-clear-avatar-btn" type="button" class="btn btn-secondary text-sm" style="padding: 4px 10px; font-size: 11px; height: 26px; color: var(--color-danger); display: none;" onclick="clearAvatar('operator-avatar-preview', 'operator-avatar-placeholder', 'operator-clear-avatar-btn', 'operator-avatar-file')">
+                    <i class="fa-solid fa-trash-can"></i> ลบรูป
+                  </button>
+                </div>
+              </div>
+
+              <div class="input-wrapper">
+                <label>ชื่อผู้ใช้งาน (Username)</label>
+                <div class="input-with-icon">
+                  <i class="fa-solid fa-user icon"></i>
+                  <input type="text" id="operator-username" readonly disabled style="opacity: 0.6; cursor: not-allowed; background: rgba(255,255,255,0.01);">
+                </div>
+              </div>
+
+              <div class="input-wrapper">
+                <label for="operator-nickname">ชื่อเล่น (Nickname) ที่จะโชว์ตรงแชท</label>
+                <div class="input-with-icon">
+                  <i class="fa-solid fa-signature icon"></i>
+                  <input type="text" id="operator-nickname" required placeholder="พิมพ์ชื่อเล่นของคุณ...">
+                </div>
+              </div>
+
+              <div class="input-wrapper">
+                <label for="operator-password">รหัสผ่านใหม่ (Password) <span style="font-size: 11px; color: var(--text-muted); font-weight: normal;">(เว้นว่างไว้หากไม่ต้องการเปลี่ยน)</span></label>
+                <div class="input-with-icon">
+                  <i class="fa-solid fa-key icon"></i>
+                  <input type="password" id="operator-password" placeholder="กำหนดรหัสผ่านใหม่ (อย่างน้อย 4 ตัว)...">
+                  <button type="button" class="btn-toggle-password" onclick="togglePasswordVisibility('operator-password')">
+                    <i class="fa-solid fa-eye-slash"></i>
+                  </button>
+                </div>
+              </div>
+
+              <button type="submit" class="btn btn-primary w-full" style="padding: 12px; margin-top: 10px;">
+                <i class="fa-solid fa-circle-check"></i> บันทึกข้อมูลส่วนตัวของฉัน
+              </button>
+            </form>
+          </div>
+        </section>
+
+      </div>
+    </main>
+  </div>
+
+  <!-- MODAL: View Slip Image -->
+  <div id="view-image-modal" class="modal-overlay hidden">
+    <div class="modal-content" style="max-width: 500px; text-align: center;">
+      <div class="modal-header">
+        <h2><i class="fa-solid fa-image" style="color: var(--accent-secondary);"></i> รูปภาพสลิปโอนเงิน</h2>
+        <button id="btn-close-image-modal" class="btn-close-modal" title="ปิดหน้าต่าง">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+      <div class="modal-body" style="padding: 10px 0;">
+        <img id="modal-slip-image" src="" alt="สลิปโอนเงิน" style="max-width: 100%; max-height: 70vh; border-radius: var(--radius-sm); border: 1px solid var(--border-color); object-fit: contain;">
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: Add New Account -->
+  <div id="add-account-modal" class="modal-overlay hidden">
+    <div class="modal-content" style="max-width: 450px;">
+      <div class="modal-header">
+        <h2><i class="fa-solid fa-user-plus" style="color: var(--accent-secondary);"></i> เพิ่มสมาชิก / พนักงานใหม่</h2>
+        <button id="btn-close-account-modal" class="btn-close-modal" onclick="closeAddAccountModal()" title="ปิดหน้าต่าง">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+      <div class="modal-body" style="padding-top: 10px;">
+        <form id="add-account-form" class="form-card" style="background: none; border: none; padding: 0; box-shadow: none; gap: 16px;">
+          
+          <!-- Avatar Upload in Add Modal -->
+          <div class="avatar-upload-container" style="display: flex; flex-direction: column; align-items: center; gap: 10px; margin-bottom: 10px;">
+            <div class="avatar-preview-wrapper" onclick="triggerAvatarUpload('new-avatar-file')" style="position: relative; width: 100px; height: 100px; border-radius: 50%; border: 2px solid var(--border-color-glow); background: rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center; overflow: hidden; cursor: pointer; transition: var(--transition-smooth);">
+              <img id="new-avatar-preview" src="" style="width: 100%; height: 100%; object-fit: cover; display: none;" />
+              <i id="new-avatar-placeholder" class="fa-solid fa-user-plus" style="font-size: 36px; color: var(--text-secondary);"></i>
+              <div class="avatar-upload-overlay" style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center; opacity: 0; transition: var(--transition-smooth); border-radius: 50%;">
+                <i class="fa-solid fa-camera" style="color: white; font-size: 20px;"></i>
+              </div>
+            </div>
+            <input type="file" id="new-avatar-file" accept="image/*" style="display: none;" onchange="handleAvatarFileChange(this, 'new-avatar-preview', 'new-avatar-placeholder', 'new-clear-avatar-btn')" />
+            <div style="display: flex; gap: 8px;">
+              <button type="button" class="btn btn-secondary text-sm" style="padding: 4px 10px; font-size: 11px; height: 26px;" onclick="triggerAvatarUpload('new-avatar-file')">
+                <i class="fa-solid fa-upload"></i> อัปโหลดรูปภาพ
+              </button>
+              <button id="new-clear-avatar-btn" type="button" class="btn btn-secondary text-sm" style="padding: 4px 10px; font-size: 11px; height: 26px; color: var(--color-danger); display: none;" onclick="clearAvatar('new-avatar-preview', 'new-avatar-placeholder', 'new-clear-avatar-btn', 'new-avatar-file')">
+                <i class="fa-solid fa-trash-can"></i> ลบรูป
+              </button>
+            </div>
+          </div>
+
+          <div class="input-wrapper">
+            <label for="new-username">ชื่อผู้ใช้ (Username)</label>
+            <div class="input-with-icon">
+              <i class="fa-solid fa-user icon"></i>
+              <input type="text" id="new-username" required placeholder="พิมพ์ชื่อผู้ใช้ภาษาอังกฤษ (เช่น staff01)">
+            </div>
+          </div>
+
+          <div class="input-wrapper">
+            <label for="new-nickname">ชื่อเล่น (Nickname) <span style="font-size: 11px; color: var(--text-muted); font-weight: normal;">(เว้นว่างไว้จะเป็นชื่อเดียวกับ Username)</span></label>
+            <div class="input-with-icon">
+              <i class="fa-solid fa-signature icon"></i>
+              <input type="text" id="new-nickname" placeholder="ระบุชื่อเล่นพนักงาน...">
+            </div>
+          </div>
+
+          <div class="input-wrapper">
+            <label for="new-password">รหัสผ่าน (Password)</label>
+            <div class="input-with-icon">
+              <i class="fa-solid fa-key icon"></i>
+              <input type="password" id="new-password" required placeholder="กำหนดรหัสผ่านเข้าเครื่อง...">
+              <button type="button" class="btn-toggle-password" onclick="togglePasswordVisibility('new-password')">
+                <i class="fa-solid fa-eye-slash"></i>
+              </button>
+            </div>
+          </div>
+
+          <div class="input-wrapper">
+            <label for="new-role">บทบาทหน้าที่สิทธิ์ (Role)</label>
+            <div class="input-with-icon">
+              <i class="fa-solid fa-shield icon"></i>
+              <select id="new-role" required style="background: #111116;">
+                <option value="operator">Operator (พนักงานเติมเกมทั่วไป)</option>
+                <option value="head-admin">Head Admin (ผู้ดูแลระบบสูงสุด)</option>
+              </select>
+            </div>
+          </div>
+
+          <button type="submit" class="btn btn-primary w-full" style="padding: 12px; margin-top: 10px;">
+            <i class="fa-solid fa-user-plus"></i> เพิ่มบัญชีสมาชิกเข้าระบบ
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: Edit Account Details -->
+  <div id="edit-account-modal" class="modal-overlay hidden">
+    <div class="modal-content" style="max-width: 450px;">
+      <div class="modal-header">
+        <h2><i class="fa-solid fa-user-gear" style="color: var(--accent-secondary);"></i> แก้ไขบัญชีพนักงาน / สมาชิก</h2>
+        <button id="btn-close-edit-account-modal" class="btn-close-modal" onclick="closeEditAccountModal()" title="ปิดหน้าต่าง">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+      <div class="modal-body" style="padding-top: 10px;">
+        <form id="edit-account-form" class="form-card" style="background: none; border: none; padding: 0; box-shadow: none; gap: 16px;">
+          
+          <!-- Avatar Edit in Modal -->
+          <div class="avatar-upload-container" style="display: flex; flex-direction: column; align-items: center; gap: 10px; margin-bottom: 10px;">
+            <div class="avatar-preview-wrapper" onclick="triggerAvatarUpload('edit-avatar-file')" style="position: relative; width: 100px; height: 100px; border-radius: 50%; border: 2px solid var(--border-color-glow); background: rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center; overflow: hidden; cursor: pointer; transition: var(--transition-smooth);">
+              <img id="edit-avatar-preview" src="" style="width: 100%; height: 100%; object-fit: cover; display: none;" />
+              <i id="edit-avatar-placeholder" class="fa-solid fa-user-astronaut" style="font-size: 40px; color: var(--text-secondary);"></i>
+              <div class="avatar-upload-overlay" style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center; opacity: 0; transition: var(--transition-smooth); border-radius: 50%;">
+                <i class="fa-solid fa-camera" style="color: white; font-size: 20px;"></i>
+              </div>
+            </div>
+            <input type="file" id="edit-avatar-file" accept="image/*" style="display: none;" onchange="handleAvatarFileChange(this, 'edit-avatar-preview', 'edit-avatar-placeholder', 'edit-clear-avatar-btn')" />
+            <div style="display: flex; gap: 8px;">
+              <button type="button" class="btn btn-secondary text-sm" style="padding: 4px 10px; font-size: 11px; height: 26px;" onclick="triggerAvatarUpload('edit-avatar-file')">
+                <i class="fa-solid fa-upload"></i> อัปโหลดรูปภาพ
+              </button>
+              <button id="edit-clear-avatar-btn" type="button" class="btn btn-secondary text-sm" style="padding: 4px 10px; font-size: 11px; height: 26px; color: var(--color-danger); display: none;" onclick="clearAvatar('edit-avatar-preview', 'edit-avatar-placeholder', 'edit-clear-avatar-btn', 'edit-avatar-file')">
+                <i class="fa-solid fa-trash-can"></i> ลบรูป
+              </button>
+            </div>
+          </div>
+
+          <div class="input-wrapper">
+            <label>ชื่อผู้ใช้ (Username) <span style="font-size: 11px; color: var(--text-muted); font-weight: normal;">(ไม่สามารถเปลี่ยนได้)</span></label>
+            <div class="input-with-icon">
+              <i class="fa-solid fa-user icon"></i>
+              <input type="text" id="edit-username" readonly disabled style="opacity: 0.6; cursor: not-allowed; background: rgba(255,255,255,0.01);">
+            </div>
+          </div>
+
+          <div class="input-wrapper">
+            <label for="edit-nickname">ชื่อเล่น (Nickname)</label>
+            <div class="input-with-icon">
+              <i class="fa-solid fa-signature icon"></i>
+              <input type="text" id="edit-nickname" required placeholder="ชื่อเล่นใช้แสดงตรงช่องแชท...">
+            </div>
+          </div>
+
+          <div class="input-wrapper">
+            <label for="edit-password">รหัสผ่านใหม่ (Password) <span style="font-size: 11px; color: var(--text-muted); font-weight: normal;">(เว้นว่างไว้หากไม่ต้องการเปลี่ยน)</span></label>
+            <div class="input-with-icon">
+              <i class="fa-solid fa-key icon"></i>
+              <input type="password" id="edit-password" placeholder="ตั้งรหัสผ่านใหม่...">
+              <button type="button" class="btn-toggle-password" onclick="togglePasswordVisibility('edit-password')">
+                <i class="fa-solid fa-eye-slash"></i>
+              </button>
+            </div>
+          </div>
+
+          <div class="input-wrapper">
+            <label for="edit-role">บทบาทหน้าที่สิทธิ์ (Role)</label>
+            <div class="input-with-icon">
+              <i class="fa-solid fa-shield icon"></i>
+              <select id="edit-role" required style="background: #111116;">
+                <option value="operator">Operator (พนักงานเติมเกมทั่วไป)</option>
+                <option value="head-admin">Head Admin (ผู้ดูแลระบบสูงสุด)</option>
+              </select>
+            </div>
+          </div>
+
+          <button type="submit" class="btn btn-primary w-full" style="padding: 12px; margin-top: 10px;">
+            <i class="fa-solid fa-circle-check"></i> บันทึกการแก้ไขข้อมูลบัญชี
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Header for Authorization Token
+    const getAuthHeaders = () => {
+      const token = sessionStorage.getItem('access_password');
+      return {
+        'Content-Type': 'application/json',
+        'Authorization': token || ''
+      };
+    };
+
+    // Load logged-in User display
+    const userDisplay = sessionStorage.getItem('access_username') || 'Admin';
+    document.getElementById('admin-user-display').textContent = userDisplay;
+
+    // Toggle Password Visibility
+    function togglePasswordVisibility(inputId) {
+      const input = document.getElementById(inputId);
+      const icon = input.nextElementSibling.querySelector('i');
+      if (input.type === 'password') {
+        input.type = 'text';
+        icon.classList.remove('fa-eye-slash');
+        icon.classList.add('fa-eye');
+      } else {
+        input.type = 'password';
+        icon.classList.remove('fa-eye');
+        icon.classList.add('fa-eye-slash');
+      }
+    }
+
+
+
+    // Adapt callback nesting wrapper
+    function resizeToSquareBase64(file, size, callback) {
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const img = new Image();
+        img.onload = function() {
+          const canvas = document.createElement('canvas');
+          canvas.width = size;
+          canvas.height = size;
+          
+          const ctx = canvas.getContext('2d');
+          
+          let srcX = 0;
+          let srcY = 0;
+          let srcSize = Math.min(img.width, img.height);
+          
+          if (img.width > img.height) {
+            srcX = Math.round((img.width - img.height) / 2);
+          } else {
+            srcY = Math.round((img.height - img.width) / 2);
+          }
+          
+          ctx.drawImage(img, srcX, srcY, srcSize, srcSize, 0, 0, size, size);
+          const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
+          callback(dataUrl);
+        };
+        img.src = e.target.result;
+      };
+      reader.readAsDataURL(file);
+    }
+
+    // Helper to trigger hidden file inputs
+    function triggerAvatarUpload(inputId) {
+      document.getElementById(inputId).click();
+    }
+
+    // Helper to clear avatar previews
+    function clearAvatar(imgId, placeholderId, clearBtnId, fileInputId) {
+      const img = document.getElementById(imgId);
+      const placeholder = document.getElementById(placeholderId);
+      const clearBtn = document.getElementById(clearBtnId);
+      const fileInput = document.getElementById(fileInputId);
+      
+      img.src = '';
+      img.style.display = 'none';
+      placeholder.style.display = 'flex';
+      clearBtn.style.display = 'none';
+      if (fileInput) fileInput.value = '';
+    }
+
+    // Helper to handle avatar file selection with cropping/compression
+    function handleAvatarFileChange(input, imgId, placeholderId, clearBtnId) {
+      if (input.files && input.files[0]) {
+        const file = input.files[0];
+        if (!file.type.startsWith('image/')) {
+          alert('❌ กรุณาเลือกไฟล์รูปภาพเท่านั้น!');
+          input.value = '';
+          return;
+        }
+        
+        // Show loading indicator in place of avatar
+        const placeholder = document.getElementById(placeholderId);
+        const originalIcon = placeholder.innerHTML;
+        placeholder.innerHTML = '<i class="fa-solid fa-spinner fa-spin" style="font-size: 32px;"></i>';
+        
+        resizeToSquareBase64(file, 120, (base64Url) => {
+          const img = document.getElementById(imgId);
+          const clearBtn = document.getElementById(clearBtnId);
+          
+          img.src = base64Url;
+          img.style.display = 'block';
+          
+          placeholder.innerHTML = originalIcon;
+          placeholder.style.display = 'none';
+          clearBtn.style.display = 'inline-flex';
+        });
+      }
+    }
+
+    // Switch Tabs
+    function switchTab(tabId, el) {
+      // Hide all panels
+      document.querySelectorAll('.tab-panel').forEach(p => p.classList.add('hidden'));
+      // Show target panel
+      document.getElementById(tabId).classList.remove('hidden');
+      
+      // Remove active class from nav items
+      document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+      // Add active to current
+      el.classList.add('active');
+
+      // Change Title
+      const title = document.getElementById('panel-title');
+      if (tabId === 'tab-dashboard') title.textContent = 'สรุปภาพรวมและประวัติธุรกรรม';
+      if (tabId === 'tab-config') title.textContent = 'ตั้งค่าการเชื่อมต่อ API & ระบบหลังบ้าน';
+      if (tabId === 'tab-accounts') title.textContent = 'จัดการบัญชีและสิทธิ์สมาชิก';
+
+      // Close sidebar if open on mobile
+      const nav = document.querySelector('.admin-nav');
+      const overlay = document.getElementById('sidebar-overlay');
+      if (nav && nav.classList.contains('open')) {
+        nav.classList.remove('open');
+        overlay.classList.remove('active');
+      }
+    }
+
+    // Action: Toggle Mobile Sidebar
+    function toggleSidebar(e) {
+      if (e) {
+        e.stopPropagation();
+      }
+      const nav = document.querySelector('.admin-nav');
+      const overlay = document.getElementById('sidebar-overlay');
+      nav.classList.toggle('open');
+      overlay.classList.toggle('active');
+    }
+
+    // Global State for Transactions
+    let allTransactions = [];
+    let currentPage = 1;
+
+    // Helper: Parse DD/MM/YYYY HH:mm to Date object
+    const parseTxDate = (datetimeStr) => {
+      if (!datetimeStr) return null;
+      const parts = datetimeStr.split(' ');
+      const dateParts = parts[0].split('/');
+      if (dateParts.length < 3) return null;
+      
+      let hours = 0;
+      let minutes = 0;
+      if (parts[1]) {
+        const timeParts = parts[1].split(':');
+        hours = Number(timeParts[0]) || 0;
+        minutes = Number(timeParts[1]) || 0;
+      }
+      return new Date(Number(dateParts[2]), Number(dateParts[1]) - 1, Number(dateParts[0]), hours, minutes);
+    };
+
+    // Tab Loaders: Render function
+    function renderTransactions(logs, fullLogs = logs) {
+      const tbody = document.getElementById('transactions-tbody');
+      tbody.innerHTML = '';
+      
+      if (logs.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="10" style="text-align: center; color: var(--text-muted); padding: 30px;">ไม่พบรายการธุรกรรมตามเงื่อนไขที่เลือก</td></tr>`;
+        document.getElementById('stat-total-slips').textContent = 0;
+        document.getElementById('stat-total-revenue').textContent = '0 บาท';
+        return;
+      }
+
+      // Set total slips matching filter
+      document.getElementById('stat-total-slips').textContent = fullLogs.length;
+      
+      // Sum total revenue matching filter
+      let totalRevenue = 0;
+      fullLogs.forEach(tx => {
+        totalRevenue += tx.amount || 0;
+      });
+      document.getElementById('stat-total-revenue').textContent = totalRevenue.toLocaleString() + ' บาท';
+      
+      logs.forEach(tx => {
+        const tr = document.createElement('tr');
+        const sheetBadge = tx.sheetStatus === 'success' 
+          ? '<span class="badge success"><i class="fa-solid fa-circle-check"></i> บันทึกแล้ว</span>'
+          : tx.sheetStatus === 'failed'
+            ? '<span class="badge error"><i class="fa-solid fa-circle-xmark"></i> ผิดพลาด</span>'
+            : '<span class="badge info"><i class="fa-solid fa-circle-info"></i> ข้าม</span>';
+        
+        const imageBtn = tx.imageName 
+          ? `<button onclick="showSlipImage('${tx.imageName}')" class="btn btn-secondary text-sm" style="padding: 4px 8px; font-size: 11px; margin: 0 auto; display: flex; gap: 4px; align-items: center;" title="ดูรูปภาพสลิป"><i class="fa-solid fa-eye" style="color: var(--accent-secondary);"></i> ดูสลิป</button>`
+          : `<span style="color: var(--text-muted); font-size: 11px; display: block; text-align: center;">ไม่มีรูปภาพ</span>`;
+
+        const deleteBtn = tx.id 
+          ? `<button onclick="deleteTransaction('${tx.id}')" class="btn-table-action" title="ลบรายการธุรกรรม"><i class="fa-solid fa-trash-can"></i></button>`
+          : `<span style="color: var(--text-muted); font-size: 11px; display: block; text-align: center;">-</span>`;
+
+        tr.innerHTML = `
+          <td>${tx.datetime}</td>
+          <td>${tx.slip_date || '<span style="color: var(--text-muted); font-size: 12px;">ไม่ระบุ</span>'}</td>
+          <td><strong>${tx.game}</strong></td>
+          <td><code>${tx.uid}</code></td>
+          <td>${tx.package}</td>
+          <td style="font-weight: 700; color: var(--accent-secondary); text-align: right;">${tx.amount.toLocaleString()} ฿</td>
+          <td><span class="badge success"><i class="fa-solid fa-check"></i> ${tx.status}</span></td>
+          <td>${sheetBadge}</td>
+          <td style="text-align: center;">${imageBtn}</td>
+          <td style="text-align: center;">${deleteBtn}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    async function loadTransactions() {
+      const tbody = document.getElementById('transactions-tbody');
+      try {
+        const res = await fetch('/api/admin/transactions', { headers: getAuthHeaders() });
+        if (!res.ok) throw new Error('เรียกดูประวัติไม่ได้');
+        
+        const logs = await res.json();
+        allTransactions = logs;
+        
+        // Reset Date Filter inputs when loading new data
+        document.getElementById('filter-date-start').value = '';
+        document.getElementById('filter-date-end').value = '';
+        document.getElementById('filter-limit').value = '8';
+        currentPage = 1;
+        
+        applyFilters(true);
+      } catch (err) {
+        tbody.innerHTML = `<tr><td colspan="10" style="text-align: center; color: var(--color-danger); padding: 30px;">เกิดข้อผิดพลาดในการดึงข้อมูลประวัติ</td></tr>`;
+      }
+    }
+
+    // Date, Time & Limit Filter Logic with Pagination
+    function applyFilters(resetPage = true) {
+      if (resetPage) {
+        currentPage = 1;
+      }
+      
+      const startVal = document.getElementById('filter-date-start').value;
+      const endVal = document.getElementById('filter-date-end').value;
+      const limitVal = Number(document.getElementById('filter-limit').value) || 8;
+      
+      let filtered = allTransactions;
+      
+      if (startVal) {
+        const startDate = new Date(startVal);
+        filtered = filtered.filter(tx => {
+          const txDate = parseTxDate(tx.datetime);
+          return txDate && txDate >= startDate;
+        });
+      }
+      
+      if (endVal) {
+        const endDate = new Date(endVal);
+        filtered = filtered.filter(tx => {
+          const txDate = parseTxDate(tx.datetime);
+          return txDate && txDate <= endDate;
+        });
+      }
+      
+      // Calculate pagination indices
+      const totalCount = filtered.length;
+      const totalPages = Math.ceil(totalCount / limitVal) || 1;
+      
+      // Ensure currentPage is within bounds
+      if (currentPage > totalPages) currentPage = totalPages;
+      if (currentPage < 1) currentPage = 1;
+      
+      const startIndex = (currentPage - 1) * limitVal;
+      const endIndex = Math.min(startIndex + limitVal, totalCount);
+      const sliced = filtered.slice(startIndex, endIndex);
+      
+      // Render logs inside table (pass filtered logs to compute summary cards accurately)
+      renderTransactions(sliced, filtered);
+      
+      // Update pagination UI stats & buttons
+      document.getElementById('page-start-idx').textContent = totalCount === 0 ? 0 : startIndex + 1;
+      document.getElementById('page-end-idx').textContent = endIndex;
+      document.getElementById('page-total-count').textContent = totalCount;
+      document.getElementById('current-page-num').textContent = currentPage;
+      document.getElementById('total-pages-num').textContent = totalPages;
+      
+      // Enable/disable buttons
+      document.getElementById('btn-prev-page').disabled = currentPage === 1;
+      document.getElementById('btn-next-page').disabled = currentPage === totalPages;
+    }
+
+    function clearFilters() {
+      document.getElementById('filter-date-start').value = '';
+      document.getElementById('filter-date-end').value = '';
+      document.getElementById('filter-limit').value = '8';
+      applyFilters(true);
+    }
+
+    function changePage(offset) {
+      currentPage += offset;
+      applyFilters(false);
+    }
+
+    // Action: Delete Transaction Log (Requires Password verification)
+    async function deleteTransaction(id) {
+      const password = prompt('🔑 กรุณากรอกรหัสผ่านบัญชีผู้ดูแลระบบ (Admin Password) เพื่อยืนยันการลบรายการธุรกรรมและรูปสลิปนี้:');
+      if (password === null) return; // Cancelled
+      
+      const trimmed = password.trim();
+      if (!trimmed) {
+        alert('❌ กรุณากรอกรหัสผ่านเพื่อดำเนินการ!');
+        return;
+      }
+      
+      if (!confirm('⚠️ คำเตือน: คุณต้องการลบรายการธุรกรรมนี้ออกจากระบบฐานข้อมูลและลบไฟล์รูปภาพสลิปบนเซิร์ฟเวอร์แบบถาวรใช่หรือไม่? การลบนี้ไม่สามารถย้อนคืนได้!')) {
+        return;
+      }
+      
+      try {
+        const res = await fetch('/api/admin/transactions/delete', {
+          method: 'DELETE',
+          headers: getAuthHeaders(),
+          body: JSON.stringify({ id, password: trimmed })
+        });
+        
+        if (res.ok) {
+          alert('✅ ลบรายการธุรกรรมและไฟล์สลิปบนเซิร์ฟเวอร์สำเร็จเรียบร้อย!');
+          loadTransactions(); // Reload data
+        } else {
+          const err = await res.json();
+          alert('❌ ลบไม่สำเร็จ: ' + err.error);
+        }
+      } catch (err) {
+        alert('❌ เกิดข้อผิดพลาดในการติดต่อฐานข้อมูลเซิร์ฟเวอร์');
+      }
+    }
+
+    async function loadConfig() {
+      try {
+        const res = await fetch('/api/admin/config', { headers: getAuthHeaders() });
+        if (res.ok) {
+          const config = await res.json();
+          document.getElementById('admin-gemini-key').value = config.GEMINI_API_KEY;
+          document.getElementById('admin-openai-key').value = config.OPENAI_API_KEY;
+          document.getElementById('admin-webapp-url').value = config.WEBAPP_URL;
+          document.getElementById('admin-auto-delete-period').value = config.AUTO_DELETE_PERIOD || 'disabled';
+        }
+      } catch (e) {
+        console.error('Failed to load configs:', e);
+      }
+    }
+
+    async function loadAccounts() {
+      const tbody = document.getElementById('accounts-tbody');
+      try {
+        const res = await fetch('/api/admin/accounts', { headers: getAuthHeaders() });
+        if (!res.ok) throw new Error('โหลดรายชื่อบัญชีไม่ได้');
+        
+        const accounts = await res.json();
+        tbody.innerHTML = '';
+
+        // Update stats active users
+        document.getElementById('stat-active-users').textContent = accounts.length;
+
+        accounts.forEach(u => {
+          const tr = document.createElement('tr');
+          
+          const avatarHtml = u.profileImage 
+            ? `<img src="${u.profileImage}" style="width: 34px; height: 34px; border-radius: 50%; object-fit: cover; border: 1px solid rgba(255,255,255,0.15); display: block; margin: 0 auto;" alt="Avatar">`
+            : `<div style="width: 34px; height: 34px; border-radius: 50%; background: rgba(255,255,255,0.05); display: flex; align-items: center; justify-content: center; margin: 0 auto; border: 1px solid rgba(255,255,255,0.08);"><i class="fa-solid fa-user-astronaut" style="color: var(--text-secondary); font-size: 14px;"></i></div>`;
+
+          const roleLabel = u.role === 'head-admin' 
+            ? '<span class="badge success" style="background: rgba(16, 185, 129, 0.15)"><i class="fa-solid fa-crown"></i> Head Admin</span>'
+            : '<span class="badge info" style="background: rgba(59, 130, 246, 0.15)"><i class="fa-solid fa-user-large"></i> Operator</span>';
+          
+          const nickname = u.nickname || u.username;
+          
+          tr.innerHTML = `
+            <td style="text-align: center; padding: 10px 0;">${avatarHtml}</td>
+            <td><strong>${u.username}</strong></td>
+            <td><span style="color: var(--accent-secondary); font-weight: 500;">${nickname}</span></td>
+            <td>${roleLabel}</td>
+            <td style="text-align: center; white-space: nowrap;">
+              <button onclick="openEditAccountModal('${u.username}', '${nickname}', '${u.role}', '${u.profileImage || ''}')" class="btn-table-action" style="color: var(--accent-secondary); margin-right: 8px;" title="แก้ไขโปรไฟล์บัญชี">
+                <i class="fa-solid fa-user-pen"></i>
+              </button>
+              <button onclick="changePassword('${u.username}')" class="btn-table-action" style="color: var(--color-warning); margin-right: 8px;" title="เปลี่ยนรหัสผ่านโดยเร็ว">
+                <i class="fa-solid fa-key"></i>
+              </button>
+              <button onclick="deleteAccount('${u.username}')" class="btn-table-action" title="ลบบัญชีสมาชิก">
+                <i class="fa-solid fa-trash-can"></i>
+              </button>
+            </td>
+          `;
+          tbody.appendChild(tr);
+        });
+      } catch (err) {
+        tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: var(--color-danger); padding: 30px;">ล้มเหลวในการโหลดรายชื่อสมาชิก</td></tr>`;
+      }
+    }
+
+    // Action: Save Config
+    document.getElementById('config-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const btn = e.target.querySelector('button[type="submit"]');
+      const originalText = btn.innerHTML;
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> กำลังอัปเดตระบบ...';
+
+      const GEMINI_API_KEY = document.getElementById('admin-gemini-key').value;
+      const OPENAI_API_KEY = document.getElementById('admin-openai-key').value;
+      const WEBAPP_URL = document.getElementById('admin-webapp-url').value;
+      const AUTO_DELETE_PERIOD = document.getElementById('admin-auto-delete-period').value;
+
+      try {
+        const res = await fetch('/api/admin/save-config', {
+          method: 'POST',
+          headers: getAuthHeaders(),
+          body: JSON.stringify({ GEMINI_API_KEY, OPENAI_API_KEY, WEBAPP_URL, AUTO_DELETE_PERIOD })
+        });
+
+        if (res.ok) {
+          alert('✅ บันทึกและอัปเดตการเชื่อมต่อ API เรียบร้อยแล้ว!');
+          loadConfig();
+        } else {
+          const err = await res.json();
+          alert('❌ บันทึกล้มเหลว: ' + err.error);
+        }
+      } catch (err) {
+        alert('เกิดข้อผิดพลาดในการบันทึกข้อมูล');
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+      }
+    });
+
+    // Action: Save Auto-Cleanup
+    document.getElementById('cleanup-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const btn = e.target.querySelector('button[type="submit"]');
+      const originalText = btn.innerHTML;
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> กำลังอัปเดตระบบ...';
+
+      const GEMINI_API_KEY = document.getElementById('admin-gemini-key').value;
+      const OPENAI_API_KEY = document.getElementById('admin-openai-key').value;
+      const WEBAPP_URL = document.getElementById('admin-webapp-url').value;
+      const AUTO_DELETE_PERIOD = document.getElementById('admin-auto-delete-period').value;
+
+      try {
+        const res = await fetch('/api/admin/save-config', {
+          method: 'POST',
+          headers: getAuthHeaders(),
+          body: JSON.stringify({ GEMINI_API_KEY, OPENAI_API_KEY, WEBAPP_URL, AUTO_DELETE_PERIOD })
+        });
+
+        if (res.ok) {
+          alert('✅ อัปเดตนโยบายลบรายการข้อมูลเก่าอัตโนมัติสำเร็จเรียบร้อยแล้ว!');
+          loadConfig();
+        } else {
+          const err = await res.json();
+          alert('❌ บันทึกล้มเหลว: ' + err.error);
+        }
+      } catch (err) {
+        alert('เกิดข้อผิดพลาดในการบันทึกข้อมูล');
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+      }
+    });
+
+    // Action: Add Account
+    document.getElementById('add-account-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const username = document.getElementById('new-username').value;
+      const nickname = document.getElementById('new-nickname').value || username;
+      const password = document.getElementById('new-password').value;
+      const role = document.getElementById('new-role').value;
+      
+      const newImgPreview = document.getElementById('new-avatar-preview');
+      const profileImage = newImgPreview.src.startsWith('data:image/') ? newImgPreview.src : '';
+
+      try {
+        const res = await fetch('/api/admin/accounts/add', {
+          method: 'POST',
+          headers: getAuthHeaders(),
+          body: JSON.stringify({ username, nickname, password, role, profileImage })
+        });
+
+        if (res.ok) {
+          alert(`✅ เพิ่มบัญชี "${username}" ในฐานระบบสำเร็จ!`);
+          document.getElementById('new-username').value = '';
+          document.getElementById('new-nickname').value = '';
+          document.getElementById('new-password').value = '';
+          clearAvatar('new-avatar-preview', 'new-avatar-placeholder', 'new-clear-avatar-btn', 'new-avatar-file');
+          closeAddAccountModal();
+          loadAccounts();
+        } else {
+          const err = await res.json();
+          alert('❌ เพิ่มสมาชิกไม่ได้: ' + err.error);
+        }
+      } catch (e) {
+        alert('เกิดข้อผิดพลาดในการเชื่อมต่อ');
+      }
+    });
+
+    function openAddAccountModal() {
+      document.getElementById('new-username').value = '';
+      document.getElementById('new-nickname').value = '';
+      document.getElementById('new-password').value = '';
+      document.getElementById('new-role').value = 'operator';
+      clearAvatar('new-avatar-preview', 'new-avatar-placeholder', 'new-clear-avatar-btn', 'new-avatar-file');
+      document.getElementById('add-account-modal').classList.remove('hidden');
+    }
+
+    function closeAddAccountModal() {
+      document.getElementById('add-account-modal').classList.add('hidden');
+    }
+
+    function openEditAccountModal(username, nickname, role, profileImage) {
+      document.getElementById('edit-username').value = username;
+      document.getElementById('edit-nickname').value = nickname || username;
+      document.getElementById('edit-password').value = '';
+      document.getElementById('edit-role').value = role;
+
+      const img = document.getElementById('edit-avatar-preview');
+      const placeholder = document.getElementById('edit-avatar-placeholder');
+      const clearBtn = document.getElementById('edit-clear-avatar-btn');
+      const fileInput = document.getElementById('edit-avatar-file');
+      
+      if (fileInput) fileInput.value = '';
+
+      if (profileImage) {
+        img.src = profileImage;
+        img.style.display = 'block';
+        placeholder.style.display = 'none';
+        clearBtn.style.display = 'inline-flex';
+      } else {
+        img.src = '';
+        img.style.display = 'none';
+        placeholder.style.display = 'flex';
+        clearBtn.style.display = 'none';
+      }
+
+      document.getElementById('edit-account-modal').classList.remove('hidden');
+    }
+
+    function closeEditAccountModal() {
+      document.getElementById('edit-account-modal').classList.add('hidden');
+    }
+
+    // Form Submission: Edit Account
+    document.getElementById('edit-account-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const btn = e.target.querySelector('button[type="submit"]');
+      const originalText = btn.innerHTML;
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> กำลังบันทึกข้อมูล...';
+
+      const username = document.getElementById('edit-username').value;
+      const nickname = document.getElementById('edit-nickname').value;
+      const password = document.getElementById('edit-password').value;
+      const role = document.getElementById('edit-role').value;
+      
+      const imgPreview = document.getElementById('edit-avatar-preview');
+      const profileImage = imgPreview.src.startsWith('data:image/') 
+        ? imgPreview.src 
+        : (imgPreview.style.display === 'none' ? '' : imgPreview.src);
+
+      try {
+        const res = await fetch('/api/admin/accounts/update', {
+          method: 'POST',
+          headers: getAuthHeaders(),
+          body: JSON.stringify({ username, nickname, password, role, profileImage })
+        });
+
+        if (res.ok) {
+          const result = await res.json();
+          alert(`✅ แก้ไขข้อมูลบัญชี "${username}" สำเร็จเรียบร้อย!`);
+          closeEditAccountModal();
+          
+          // If the Head Admin edited their OWN profile, update their session storage keys instantly!
+          const activeUser = sessionStorage.getItem('access_username');
+          if (activeUser && activeUser.toLowerCase() === username.toLowerCase()) {
+            sessionStorage.setItem('access_nickname', result.nickname);
+            sessionStorage.setItem('access_profile_image', result.profileImage);
+            if (result.newToken) {
+              sessionStorage.setItem('access_password', result.newToken);
+            }
+            
+            // Reload head title display
+            document.getElementById('admin-user-display').innerHTML = `<span style="color: var(--accent-secondary);">${result.nickname || username}</span> (แอดมินสูงสุด)`;
+          }
+
+          refreshDashboard();
+        } else {
+          const err = await res.json();
+          alert('❌ ไม่สามารถบันทึกได้: ' + err.error);
+        }
+      } catch (err) {
+        alert('เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์');
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+      }
+    });
+
+    // Action: Delete Account
+    async function deleteAccount(username) {
+      if (confirm(`คุณต้องการลบสิทธิ์การเข้าใช้งานและลบบัญชี "${username}" ออกจากระบบถาวรใช่หรือไม่?`)) {
+        try {
+          const res = await fetch('/api/admin/accounts/delete', {
+            method: 'DELETE',
+            headers: getAuthHeaders(),
+            body: JSON.stringify({ username })
+          });
+
+          if (res.ok) {
+            alert(`✅ ลบบัญชีสมาชิก "${username}" สำเร็จ!`);
+            loadAccounts();
+          } else {
+            const err = await res.json();
+            alert('❌ ลบไม่สำเร็จ: ' + err.error);
+          }
+        } catch (e) {
+          alert('เกิดข้อผิดพลาดในการดำเนินการลบ');
+        }
+      }
+    }
+
+    // Action: Change Account Password
+    async function changePassword(username) {
+      const newPassword = prompt(`🔑 กรุณาระบุรหัสผ่านใหม่สำหรับบัญชี "${username}":`);
+      if (newPassword === null) return; // Cancelled
+      
+      const trimmed = newPassword.trim();
+      if (trimmed.length < 4) {
+        alert('❌ รหัสผ่านต้องมีความยาวอย่างน้อย 4 ตัวอักษร!');
+        return;
+      }
+
+      try {
+        const res = await fetch('/api/admin/accounts/change-password', {
+          method: 'POST',
+          headers: getAuthHeaders(),
+          body: JSON.stringify({ username, newPassword: trimmed })
+        });
+
+        if (res.ok) {
+          alert(`✅ เปลี่ยนรหัสผ่านให้บัญชี "${username}" เรียบร้อยแล้ว!`);
+          
+          // If the logged in admin changed their own password, update their sessionStorage token
+          if (username.toLowerCase() === userDisplay.toLowerCase()) {
+            const token = btoa(`${username}:${role}:${trimmed}`);
+            sessionStorage.setItem('access_password', token);
+          }
+          
+          refreshDashboard();
+        } else {
+          const err = await res.json();
+          alert('❌ เปลี่ยนรหัสผ่านไม่สำเร็จ: ' + err.error);
+        }
+      } catch (e) {
+        alert('เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์');
+      }
+    }
+
+    // Role-based UI adaptation on load
+    function initRoleBasedUI() {
+      const role = sessionStorage.getItem('access_role');
+      const userDisplay = sessionStorage.getItem('access_username') || 'Admin';
+      const nicknameDisplay = sessionStorage.getItem('access_nickname') || userDisplay;
+      
+      // Welcome text & Display name
+      const adminUserDisplayEl = document.getElementById('admin-user-display');
+      if (adminUserDisplayEl) {
+        if (role === 'head-admin') {
+          adminUserDisplayEl.innerHTML = `<span style="color: var(--accent-secondary);">${nicknameDisplay}</span> (แอดมินสูงสุด)`;
+        } else {
+          adminUserDisplayEl.innerHTML = `<span style="color: var(--accent-secondary);">${nicknameDisplay}</span> (พนักงานทั่วไป)`;
+          
+          // Also rename header subtext
+          const subTextEl = document.querySelector('.admin-header p');
+          if (subTextEl) {
+            subTextEl.innerHTML = `ยินดีต้อนรับผู้ใช้งาน: <strong id="admin-user-display">${adminUserDisplayEl.innerHTML}</strong>`;
+          }
+        }
+      }
+
+      const navDashboard = document.querySelector('[onclick*="tab-dashboard"]');
+      const navConfig = document.querySelector('[onclick*="tab-config"]');
+      const navAccounts = document.querySelector('[onclick*="tab-accounts"]');
+      
+      if (role === 'operator') {
+        // Hide dashboard and config in sidebar
+        if (navDashboard) navDashboard.style.display = 'none';
+        if (navConfig) navConfig.style.display = 'none';
+        
+        // Customize accounts tab for Operator self profile
+        if (navAccounts) {
+          navAccounts.innerHTML = '<i class="fa-solid fa-user-gear"></i> แก้ไขโปรไฟล์ส่วนตัว';
+          document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+          navAccounts.classList.add('active');
+        }
+        
+        // Show operator profile, hide admin accounts section
+        document.getElementById('operator-profile-container').classList.remove('hidden');
+        document.getElementById('head-admin-accounts-section').classList.add('hidden');
+        
+        // Switch tab panel on screen
+        document.querySelectorAll('.tab-panel').forEach(p => p.classList.add('hidden'));
+        document.getElementById('tab-accounts').classList.remove('hidden');
+        
+        document.getElementById('panel-title').textContent = 'แก้ไขโปรไฟล์ส่วนตัว';
+      } else {
+        // Head admin: show accounts section, hide operator profile
+        document.getElementById('head-admin-accounts-section').classList.remove('hidden');
+        document.getElementById('operator-profile-container').classList.add('hidden');
+      }
+    }
+
+    // Loader for Operator Self Profile
+    async function loadOperatorProfile() {
+      const username = sessionStorage.getItem('access_username');
+      const nickname = sessionStorage.getItem('access_nickname') || username;
+      const avatar = sessionStorage.getItem('access_profile_image') || '';
+      
+      document.getElementById('operator-username').value = username;
+      document.getElementById('operator-nickname').value = nickname;
+      document.getElementById('operator-password').value = '';
+      
+      const img = document.getElementById('operator-avatar-preview');
+      const placeholder = document.getElementById('operator-avatar-placeholder');
+      const clearBtn = document.getElementById('operator-clear-avatar-btn');
+      
+      if (avatar) {
+        img.src = avatar;
+        img.style.display = 'block';
+        placeholder.style.display = 'none';
+        clearBtn.style.display = 'inline-flex';
+      } else {
+        img.src = '';
+        img.style.display = 'none';
+        placeholder.style.display = 'flex';
+        clearBtn.style.display = 'none';
+      }
+    }
+
+    // Action: Operator Profile Submission
+    document.getElementById('operator-profile-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const btn = e.target.querySelector('button[type="submit"]');
+      const originalText = btn.innerHTML;
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> กำลังบันทึกโปรไฟล์...';
+
+      const username = document.getElementById('operator-username').value;
+      const nickname = document.getElementById('operator-nickname').value;
+      const password = document.getElementById('operator-password').value;
+      const profileImage = document.getElementById('operator-avatar-preview').src.startsWith('data:image/') 
+        ? document.getElementById('operator-avatar-preview').src 
+        : (document.getElementById('operator-avatar-preview').style.display === 'none' ? '' : sessionStorage.getItem('access_profile_image') || '');
+
+      try {
+        const res = await fetch('/api/admin/accounts/update', {
+          method: 'POST',
+          headers: getAuthHeaders(),
+          body: JSON.stringify({ username, nickname, password, profileImage })
+        });
+
+        if (res.ok) {
+          const result = await res.json();
+          alert('✅ แก้ไขโปรไฟล์ส่วนตัวของคุณสำเร็จเรียบร้อย!');
+          
+          // Update Session Storage keys instantly!
+          sessionStorage.setItem('access_nickname', result.nickname);
+          sessionStorage.setItem('access_profile_image', result.profileImage);
+          if (result.newToken) {
+            sessionStorage.setItem('access_password', result.newToken);
+          }
+          
+          // Hot reload UI display titles
+          document.getElementById('operator-password').value = '';
+          const displayNickname = result.nickname || username;
+          
+          const adminUserDisplayEl = document.getElementById('admin-user-display');
+          if (adminUserDisplayEl) {
+            adminUserDisplayEl.innerHTML = `<span style="color: var(--accent-secondary);">${displayNickname}</span> (พนักงานทั่วไป)`;
+          }
+          
+          loadOperatorProfile();
+        } else {
+          const err = await res.json();
+          alert('❌ บันทึกไม่สำเร็จ: ' + err.error);
+        }
+      } catch (err) {
+        alert('❌ เกิดข้อผิดพลาดในการเชื่อมต่อเพื่อบันทึกข้อมูล');
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+      }
+    });
+
+    // Page Init Refresh
+    function refreshDashboard() {
+      initRoleBasedUI();
+      const role = sessionStorage.getItem('access_role');
+      if (role === 'head-admin') {
+        loadTransactions();
+        loadConfig();
+        loadAccounts();
+      } else {
+        loadOperatorProfile();
+      }
+    }
+
+    // Refresh initially
+    refreshDashboard();
+
+    // Action: Show Slip Image in modal
+    function showSlipImage(imageName) {
+      const modal = document.getElementById('view-image-modal');
+      const img = document.getElementById('modal-slip-image');
+      img.src = '/uploads/' + imageName;
+      modal.classList.remove('hidden');
+    }
+
+    // Event listeners to close image modal
+    document.getElementById('btn-close-image-modal').addEventListener('click', () => {
+      document.getElementById('view-image-modal').classList.add('hidden');
+    });
+    document.getElementById('view-image-modal').addEventListener('click', (e) => {
+      if (e.target === document.getElementById('view-image-modal')) {
+        document.getElementById('view-image-modal').classList.add('hidden');
+      }
+    });
+
+    // Event listener to close add account modal on backdrop click
+    document.getElementById('add-account-modal').addEventListener('click', (e) => {
+      if (e.target === document.getElementById('add-account-modal')) {
+        closeAddAccountModal();
+      }
+    });
+
+    // Event listener to close edit account modal on backdrop click
+    document.getElementById('edit-account-modal').addEventListener('click', (e) => {
+      if (e.target === document.getElementById('edit-account-modal')) {
+        closeEditAccountModal();
+      }
+    });
+
+    // Action: Admin Logout
+    document.getElementById('btn-admin-logout').addEventListener('click', () => {
+      if (confirm('คุณต้องการออกจากระบบใช่หรือไม่?')) {
+        sessionStorage.removeItem('access_password');
+        sessionStorage.removeItem('access_role');
+        sessionStorage.removeItem('access_username');
+        window.location.href = '/login.html';
+      }
+    });
+  </script>
+  <!-- Mobile Sidebar Overlay Backdrop -->
+  <div class="sidebar-overlay" id="sidebar-overlay" onclick="toggleSidebar(event)"></div>
+</body>
+</html>

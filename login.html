@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MT-TOPUP AI - เข้าสู่ระบบรักษาความปลอดภัย</title>
+  <!-- Google Fonts: Outfit & Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- Custom Style -->
+  <link rel="stylesheet" href="style.css">
+  <style>
+    body {
+      background-color: #0a0a0f;
+      height: 100vh;
+      width: 100vw;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      overflow: hidden;
+      position: relative;
+    }
+    .login-card {
+      position: relative;
+      z-index: 10;
+    }
+
+    /* Google reCAPTCHA v2 Widget Simulation - Dark Neon Custom Style */
+    .recaptcha-widget {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      width: 100%;
+      height: 76px;
+      background: rgba(20, 20, 28, 0.6);
+      border: 1px solid var(--border-color);
+      border-radius: 4px;
+      padding: 0 12px 0 16px;
+      box-sizing: border-box;
+      user-select: none;
+      -webkit-user-select: none;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      position: relative;
+    }
+    .recaptcha-left {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+    .recaptcha-checkbox-container {
+      position: relative;
+      width: 28px;
+      height: 28px;
+    }
+    .recaptcha-checkbox {
+      width: 28px;
+      height: 28px;
+      border: 2px solid rgba(255, 255, 255, 0.2);
+      border-radius: 2px;
+      background: rgba(0, 0, 0, 0.25);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s ease;
+    }
+    .recaptcha-checkbox:hover {
+      border-color: rgba(255, 255, 255, 0.45);
+    }
+    .recaptcha-text {
+      font-size: 13px;
+      color: var(--text-primary);
+      font-weight: 500;
+      font-family: 'Roboto', 'Helvetica', 'Arial', sans-serif;
+    }
+    .recaptcha-right {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 2px;
+      opacity: 0.85;
+    }
+    .recaptcha-logo-img {
+      width: 30px;
+      height: 30px;
+      background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="%234A90E2" d="M12,4V1L8,5l4,4V6c3.31,0,6,2.69,6,6c0,1.01-.25,1.97-.7,2.8l1.46,1.46C19.54,14.95,20,13.54,20,12C20,7.58,16.42,4,12,4z"/><path fill="%237ED321" d="M12,18c-3.31,0-6-2.69-6-6c0-1.01,.25-1.97,.7-2.8L5.24,7.74C4.46,9.05,4,10.46,4,12c0,4.42,3.58,8,8,8v3l4-4l-4-4V18z"/></svg>');
+      background-size: contain;
+      background-repeat: no-repeat;
+      animation: floatLogo 4s ease-in-out infinite;
+    }
+    .recaptcha-brand-text {
+      font-size: 8px;
+      color: var(--text-muted);
+      font-weight: 600;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+    }
+    .recaptcha-links {
+      display: flex;
+      gap: 4px;
+      font-size: 7px;
+      color: var(--text-muted);
+    }
+    .recaptcha-links a {
+      color: var(--text-muted);
+      text-decoration: none;
+      font-size: 7px;
+    }
+    .recaptcha-links a:hover {
+      text-decoration: underline;
+    }
+
+    /* Checkbox States */
+    .recaptcha-checkbox.loading {
+      border: none;
+      background: none;
+      cursor: default;
+    }
+    .recaptcha-spinner {
+      width: 22px;
+      height: 22px;
+      border: 3px solid rgba(99, 102, 241, 0.2);
+      border-top-color: var(--accent-secondary);
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+    .recaptcha-checkbox.checked {
+      border-color: var(--color-success) !important;
+      background: rgba(16, 185, 129, 0.1) !important;
+      cursor: default;
+    }
+    .recaptcha-checkmark {
+      color: var(--color-success);
+      font-size: 16px;
+      opacity: 0;
+      transform: scale(0.5);
+      animation: checkPop 0.3s cubic-bezier(0.18, 0.89, 0.32, 1.28) forwards;
+    }
+
+    .login-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      box-shadow: none;
+      background: rgba(255, 255, 255, 0.05) !important;
+      border: 1px solid var(--border-color) !important;
+      color: var(--text-muted) !important;
+      transform: none !important;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    @keyframes checkPop {
+      to { opacity: 1; transform: scale(1); }
+    }
+    @keyframes floatLogo {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-1.5px); }
+    }
+  </style>
+</head>
+<body class="dark-theme">
+  <!-- Decorative background elements for premium aesthetic -->
+  <div class="bg-glow-1"></div>
+  <div class="bg-glow-2"></div>
+
+  <!-- Standalone Secure Username/Password Login Card -->
+  <div class="login-card">
+    <div class="login-logo">
+      <img src="logo.png" class="logo-img" alt="MT-TOPUP AI Logo">
+      <span>MT-TOPUP <span class="gradient-text font-bold">AI</span></span>
+    </div>
+    <h2>ระบบสิทธิ์จำกัดการเข้าใช้งานเฉพาะสมาชิก</h2>
+    <p>กรุณากรอกชื่อผู้ใช้และรหัสผ่านเพื่อเข้าทำงานระบบเติมเงิน</p>
+    
+    <form id="login-page-form">
+      <div class="input-wrapper" style="margin-bottom: 14px;">
+        <div class="input-with-icon">
+          <i class="fa-solid fa-user icon"></i>
+          <input type="text" id="login-username" placeholder="พิมพ์ชื่อผู้ใช้งาน (Username)..." required autocomplete="username">
+        </div>
+      </div>
+      <div class="input-wrapper">
+        <div class="input-with-icon">
+          <i class="fa-solid fa-lock icon"></i>
+          <input type="password" id="login-password" placeholder="พิมพ์รหัสผ่าน (Password)..." required autocomplete="current-password">
+          <button type="button" class="btn-toggle-password" onclick="togglePasswordVisibility('login-password')">
+            <i class="fa-solid fa-eye-slash"></i>
+          </button>
+        </div>
+      </div>
+      <div id="login-error-msg" class="login-error hidden">
+        <i class="fa-solid fa-circle-exclamation"></i> ชื่อผู้ใช้ หรือรหัสผ่านไม่ถูกต้อง!
+      </div>
+      
+      <!-- Google reCAPTCHA Sim Widget -->
+      <div class="captcha-container" style="margin-top: 18px; margin-bottom: 8px;">
+        <div class="recaptcha-widget">
+          <div class="recaptcha-left">
+            <div class="recaptcha-checkbox-container">
+              <div id="recaptcha-box" class="recaptcha-checkbox"></div>
+            </div>
+            <span class="recaptcha-text">I'm not a robot</span>
+          </div>
+          <div class="recaptcha-right">
+            <div class="recaptcha-logo-img"></div>
+            <span class="recaptcha-brand-text">reCAPTCHA</span>
+            <div class="recaptcha-links">
+              <a href="#" onclick="return false;">ความเป็นส่วนตัว</a>
+              <span>•</span>
+              <a href="#" onclick="return false;">ข้อกำหนด</a>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <button type="submit" class="btn btn-primary w-full login-btn" style="margin-top: 15px;" disabled>
+        <i class="fa-solid fa-right-to-bracket"></i> ยืนยันการเข้าสู่ระบบ
+      </button>
+    </form>
+  </div>
+
+  <script>
+    // Password visibility helper
+    function togglePasswordVisibility(inputId) {
+      const input = document.getElementById(inputId);
+      const icon = input.nextElementSibling.querySelector('i');
+      if (input.type === 'password') {
+        input.type = 'text';
+        icon.classList.remove('fa-eye-slash');
+        icon.classList.add('fa-eye');
+      } else {
+        input.type = 'password';
+        icon.classList.remove('fa-eye');
+        icon.classList.add('fa-eye-slash');
+      }
+    }
+
+    // reCAPTCHA Simulation Logic
+    const recaptchaBox = document.getElementById('recaptcha-box');
+    const loginBtn = document.querySelector('.login-btn');
+    let isVerified = false;
+    let isChecking = false;
+
+    recaptchaBox.addEventListener('click', () => {
+      if (isVerified || isChecking) return;
+      
+      isChecking = true;
+      recaptchaBox.classList.add('loading');
+      recaptchaBox.innerHTML = '<div class="recaptcha-spinner"></div>';
+      
+      // Simulate real reCAPTCHA check delay (1.2s - 1.5s for authentic feel)
+      setTimeout(() => {
+        isChecking = false;
+        isVerified = true;
+        recaptchaBox.classList.remove('loading');
+        recaptchaBox.classList.add('checked');
+        recaptchaBox.innerHTML = '<i class="fa-solid fa-check recaptcha-checkmark"></i>';
+        
+        // Enable login button
+        loginBtn.disabled = false;
+      }, 1300);
+    });
+
+    const resetCaptcha = () => {
+      isVerified = false;
+      isChecking = false;
+      recaptchaBox.className = 'recaptcha-checkbox';
+      recaptchaBox.innerHTML = '';
+      loginBtn.disabled = true;
+    };
+
+    // Handle form submit
+    document.getElementById('login-page-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      if (!isVerified) {
+        alert('กรุณากดกล่องยืนยัน I\'m not a robot!');
+        return;
+      }
+      const username = document.getElementById('login-username').value;
+      const password = document.getElementById('login-password').value;
+      const errorMsg = document.getElementById('login-error-msg');
+      const card = document.querySelector('.login-card');
+      const btn = e.target.querySelector('button[type="submit"]');
+      const originalText = btn.innerHTML;
+
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> กำลังตรวจสอบ...';
+
+      try {
+        const response = await fetch('/api/login', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ username, password })
+        });
+
+        if (response.ok) {
+          const result = await response.json();
+          sessionStorage.setItem('access_password', result.token);
+          sessionStorage.setItem('access_role', result.role);
+          sessionStorage.setItem('access_username', result.username);
+          errorMsg.classList.add('hidden');
+          
+          card.style.transform = 'scale(0.95)';
+          card.style.opacity = '0';
+          card.style.transition = 'all 0.4s ease';
+          setTimeout(() => {
+            window.location.href = '/';
+          }, 400);
+        } else {
+          const errData = await response.json().catch(() => ({}));
+          errorMsg.innerHTML = `<i class="fa-solid fa-circle-exclamation"></i> ${errData.error || 'ชื่อผู้ใช้ หรือรหัสผ่านไม่ถูกต้อง!'}`;
+          errorMsg.classList.remove('hidden');
+          
+          card.classList.add('shake');
+          setTimeout(() => {
+            card.classList.remove('shake');
+          }, 400);
+          
+          // Reset password field and Captcha on failure
+          document.getElementById('login-password').value = '';
+          resetCaptcha();
+          document.getElementById('login-password').focus();
+        }
+      } catch (err) {
+        alert('เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์หลังบ้าน');
+        resetCaptcha();
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+      }
+    });
+  </script>
+</body>
+</html>
