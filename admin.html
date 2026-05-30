@@ -569,6 +569,10 @@
                 <input type="datetime-local" id="filter-date-end" style="width: 195px; padding: 6px 10px; background: rgba(0, 0, 0, 0.2); border: 1px solid var(--border-color); border-radius: var(--radius-sm); color: var(--text-primary); font-size: 12px; outline: none; transition: var(--transition-smooth);">
               </div>
               <div style="display: flex; align-items: center; gap: 6px;">
+                <span style="font-size: 12px; color: var(--text-secondary);">ค้นหา UID:</span>
+                <input type="text" id="filter-uid" placeholder="ระบุ UID..." style="width: 140px; padding: 6px 10px; background: rgba(0, 0, 0, 0.2); border: 1px solid var(--border-color); border-radius: var(--radius-sm); color: var(--text-primary); font-size: 12px; outline: none; transition: var(--transition-smooth);">
+              </div>
+              <div style="display: flex; align-items: center; gap: 6px;">
                 <span style="font-size: 12px; color: var(--text-secondary);">จำนวนรายการ:</span>
                 <select id="filter-limit" onchange="applyFilters()" style="width: 75px; padding: 6px 10px; background: rgba(0, 0, 0, 0.2); border: 1px solid var(--border-color); border-radius: var(--radius-sm); color: var(--text-primary); font-size: 12px; outline: none; transition: var(--transition-smooth); cursor: pointer;">
                   <option value="8" selected style="background-color: #111116;">8</option>
@@ -1244,9 +1248,10 @@
         const logs = await res.json();
         allTransactions = logs;
         
-        // Reset Date Filter inputs when loading new data
+        // Reset Date & UID Filter inputs when loading new data
         document.getElementById('filter-date-start').value = '';
         document.getElementById('filter-date-end').value = '';
+        document.getElementById('filter-uid').value = '';
         document.getElementById('filter-limit').value = '8';
         currentPage = 1;
         
@@ -1256,7 +1261,7 @@
       }
     }
 
-    // Date, Time & Limit Filter Logic with Pagination
+    // Date, Time, UID & Limit Filter Logic with Pagination
     function applyFilters(resetPage = true) {
       if (resetPage) {
         currentPage = 1;
@@ -1264,6 +1269,7 @@
       
       const startVal = document.getElementById('filter-date-start').value;
       const endVal = document.getElementById('filter-date-end').value;
+      const uidVal = document.getElementById('filter-uid').value.trim().toLowerCase();
       const limitVal = Number(document.getElementById('filter-limit').value) || 8;
       
       let filtered = allTransactions;
@@ -1281,6 +1287,12 @@
         filtered = filtered.filter(tx => {
           const txDate = parseTxDate(tx.datetime);
           return txDate && txDate <= endDate;
+        });
+      }
+
+      if (uidVal) {
+        filtered = filtered.filter(tx => {
+          return tx.uid && tx.uid.toString().toLowerCase().includes(uidVal);
         });
       }
       
@@ -1314,6 +1326,7 @@
     function clearFilters() {
       document.getElementById('filter-date-start').value = '';
       document.getElementById('filter-date-end').value = '';
+      document.getElementById('filter-uid').value = '';
       document.getElementById('filter-limit').value = '8';
       applyFilters(true);
     }
