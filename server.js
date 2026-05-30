@@ -1,10 +1,22 @@
 const express = require('express');
 const path = require('path');
 const fs = require('fs');
+const http = require('http');
+const { Server } = require('socket.io');
 require('dotenv').config();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+
+// Wrap Express with Node HTTP Server for Socket.IO bidirectional communication
+const server = http.createServer(app);
+const io = new Server(server, {
+  cors: {
+    origin: "*",
+    methods: ["GET", "POST"]
+  }
+});
+
 
 // Middleware for parsing JSON with a size limit (for base64 images)
 app.use(express.json({ limit: '10mb' }));
@@ -64,6 +76,43 @@ const saveMessages = (messages) => {
   }
 };
 
+// Socket.IO Connection Handler
+io.on('connection', (socket) => {
+  console.log(`[Socket.IO] A client connected: ${socket.id}`);
+  
+  socket.on('disconnect', () => {
+    console.log(`[Socket.IO] Client disconnected: ${socket.id}`);
+  });
+});
+
+// Helper: Broadcast chat messages update in real-time
+const broadcastMessageUpdate = () => {
+  try {
+    const messages = loadMessages();
+    io.emit('chat_messages_updated', messages);
+    console.log(`[Socket.IO] Broadcasted chat messages updated to all clients.`);
+  } catch (err) {
+    console.error('[Socket.IO] Broadcast chat messages failed:', err);
+  }
+};
+
+// Helper: Broadcast user profiles update in real-time
+const broadcastProfilesUpdate = () => {
+  try {
+    const users = loadUsers();
+    const profiles = {};
+    users.forEach(u => {
+      profiles[u.username.toLowerCase()] = {
+        nickname: u.nickname || u.username,
+        profileImage: u.profileImage || ''
+      };
+    });
+    io.emit('profiles_updated', profiles);
+    console.log(`[Socket.IO] Broadcasted user profiles update to all clients.`);
+  } catch (err) {
+    console.error('[Socket.IO] Broadcast profiles failed:', err);
+  }
+};
 
 // Helper: save image locally
 const saveImageLocally = (base64Data, mimeType) => {
@@ -380,6 +429,7 @@ app.get('/api/messages', checkAuth, (req, res) => {
 // Endpoint: Clear all chat messages (Head Admin Only)
 app.post('/api/messages/clear', checkAdminAuth, (req, res) => {
   saveMessages([]);
+  broadcastMessageUpdate(); // Emit to all sockets
   res.json({ status: 'success', message: 'ล้างประวัติการสนทนาเรียบร้อยแล้ว!' });
 });
 
@@ -493,6 +543,7 @@ app.post('/api/chat', checkAuth, async (req, res) => {
     });
     
     saveMessages(messages);
+    broadcastMessageUpdate(); // Emit to all sockets
 
     res.json({ text: aiResult });
 
@@ -714,6 +765,7 @@ app.post('/api/ocr', checkAuth, async (req, res) => {
     });
     
     saveMessages(chatMsgs);
+    broadcastMessageUpdate(); // Emit to all sockets
 
     // 4. Log transaction to JSON database file for Admin Dashboard view!
     if (transactions.length > 0) {
@@ -873,6 +925,7 @@ app.post('/api/admin/accounts/update', checkAuth, (req, res) => {
   }
 
   saveUsers(users);
+  broadcastProfilesUpdate(); // Emit to all sockets
 
   // Generate a new auth token if the current logged-in user edited their own details
   let newToken = null;
@@ -1015,7 +1068,7 @@ app.get('*', (req, res) => {
 });
 
 // Start Server
-app.listen(PORT, () => {
+server.listen(PORT, () => {
   console.log(`==================================================`);
   console.log(`   MT-TOPUP AI Server is running securely!`);
   console.log(`   Local URL: http://localhost:${PORT}`);

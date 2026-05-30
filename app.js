@@ -5,6 +5,7 @@ let savedApiKey = '';
 let savedWebappUrl = '';
 let savedModel = 'gemini-2.5-flash';
 let savedTheme = 'dark';
+let socket = null;
 
 try {
   savedApiKey = localStorage.getItem('vision_sheet_gemini_key') || '';
@@ -193,8 +194,9 @@ async function checkBackendConfiguration() {
         STATE.webappUrl = 'backend-secured';
       }
       
-      // Start server-side chat sync polling loop
+      // Initialize Socket.IO connection and start polling fallback
       if (STATE.useBackend) {
+        initializeSocketIO();
         syncChatMessages();
         setInterval(syncChatMessages, 3000);
       }
@@ -1517,20 +1519,9 @@ async function handlePasswordChangeSubmit(e) {
 // ==========================================================================
 // REAL-TIME CHAT AVATARS & NICKNAMES SYNCHRONIZATION
 // ==========================================================================
-async function updateChatAvatarsAndNicknames() {
+function updateChatAvatarsAndNicknamesWithData(profiles) {
+  if (!profiles) return;
   try {
-    const response = await fetch('/api/users/profiles', {
-      headers: {
-        'Authorization': sessionStorage.getItem('access_password') || ''
-      }
-    });
-    
-    if (!response.ok) return;
-    const result = await response.json();
-    if (result.status !== 'success' || !result.profiles) return;
-    
-    const profiles = result.profiles;
-    
     // Find all user and other-user messages in the chat box
     const userMessages = elements.chatMessagesBox.querySelectorAll('.message.user-msg, .message.other-user-msg');
     userMessages.forEach(msg => {
@@ -1560,15 +1551,75 @@ async function updateChatAvatarsAndNicknames() {
     // Also save the updated HTML back to localStorage so it persists across refreshes!
     saveChatHtmlToLocalStorage();
   } catch (err) {
+    console.error('Failed to sync chat nicknames and avatars with local data:', err);
+  }
+}
+
+async function updateChatAvatarsAndNicknames() {
+  try {
+    const response = await fetch('/api/users/profiles', {
+      headers: {
+        'Authorization': sessionStorage.getItem('access_password') || ''
+      }
+    });
+    
+    if (!response.ok) return;
+    const result = await response.json();
+    if (result.status !== 'success' || !result.profiles) return;
+    
+    updateChatAvatarsAndNicknamesWithData(result.profiles);
+  } catch (err) {
     console.error('Failed to sync chat nicknames and avatars:', err);
   }
 }
 
 // ==========================================================================
-// SERVER-SIDE CHAT SYNCHRONIZATION (Real-Time Polling)
+// SOCKET.IO REAL-TIME INTEGRATION & CONNECTION HANDLERS
+// ==========================================================================
+function initializeSocketIO() {
+  if (typeof io !== 'undefined' && STATE.useBackend) {
+    socket = io();
+    
+    socket.on('connect', () => {
+      console.log('[Socket.IO] Connected to backend real-time server securely.');
+    });
+
+    socket.on('disconnect', () => {
+      console.log('[Socket.IO] Disconnected from real-time server. Fallback polling enabled.');
+    });
+
+    // Listen for real-time messages update from server
+    socket.on('chat_messages_updated', (messages) => {
+      console.log('[Socket.IO] Received real-time chat messages update');
+      
+      // Skip rendering if the user is currently sending a message to prevent race conditions
+      if (STATE.isSendingMessage) return;
+      
+      if (messages.length !== STATE.localMessagesCount) {
+        renderAllMessages(messages);
+        STATE.localMessagesCount = messages.length;
+      }
+    });
+
+    // Listen for real-time user profiles update
+    socket.on('profiles_updated', (profiles) => {
+      console.log('[Socket.IO] Received real-time profile details update');
+      updateChatAvatarsAndNicknamesWithData(profiles);
+    });
+  } else {
+    console.log('[Socket.IO] Library not found or backend disabled. Fallback to HTTP polling.');
+  }
+}
+
+// ==========================================================================
+// SERVER-SIDE CHAT SYNCHRONIZATION (Real-Time Polling & Socket Fallback)
 // ==========================================================================
 async function syncChatMessages() {
   if (!STATE.useBackend) return;
+  
+  // BANDWIDTH OPTIMIZATION: If Socket.IO is actively connected, skip HTTP polling completely!
+  if (socket && socket.connected) return;
+  
   // Skip polling if the user is currently submitting a message to avoid race conditions
   if (STATE.isSendingMessage) return;
 
