@@ -1,26 +1,26 @@
 /* ==========================================================================
-   DESIGN SYSTEM & VARIABLES
+   DESIGN SYSTEM & VARIABLES (Warm Chocolate & Orange Theme)
    ========================================================================== */
 :root {
-  /* Harmonious Color Palette - Dark Theme */
-  --bg-primary: #0a0a0f;
-  --bg-secondary: rgba(20, 20, 28, 0.6);
-  --bg-glass: rgba(18, 18, 26, 0.65);
-  --bg-glass-hover: rgba(26, 26, 38, 0.85);
-  --border-color: rgba(255, 255, 255, 0.08);
-  --border-color-glow: rgba(99, 102, 241, 0.3);
+  /* Harmonious Color Palette - Warm Dark Theme matching MT-TOPUP */
+  --bg-primary: #120d0a; /* Warm deep dark chocolate */
+  --bg-secondary: rgba(28, 20, 16, 0.6); /* Warm dark brown */
+  --bg-glass: rgba(22, 16, 12, 0.65); /* Rich dark brown glass */
+  --bg-glass-hover: rgba(38, 26, 20, 0.85); /* Slightly lighter warm brown */
+  --border-color: rgba(255, 255, 255, 0.06);
+  --border-color-glow: rgba(249, 115, 22, 0.3); /* Amber/Orange border glow */
   
-  --text-primary: #f3f4f6;
-  --text-secondary: #9ca3af;
-  --text-muted: #6b7280;
+  --text-primary: #f5f2eb; /* Warm cream-white */
+  --text-secondary: #d1c7bd; /* Warm gray-beige */
+  --text-muted: #8c827a; /* Muted warm brown-gray */
   
-  --accent-primary: #6366f1; /* Indigo */
-  --accent-secondary: #06b6d4; /* Cyan */
-  --accent-gradient: linear-gradient(135deg, #6366f1 0%, #06b6d4 100%);
+  --accent-primary: #f97316; /* Vibrant Orange */
+  --accent-secondary: #ea580c; /* Darker Orange/Rust */
+  --accent-gradient: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
   
-  --shadow-sm: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-  --shadow-lg: 0 10px 25px -5px rgba(0, 0, 0, 0.3), 0 8px 10px -6px rgba(0, 0, 0, 0.3);
-  --shadow-glow: 0 0 20px rgba(99, 102, 241, 0.25);
+  --shadow-sm: 0 4px 6px -1px rgba(0, 0, 0, 0.15), 0 2px 4px -1px rgba(0, 0, 0, 0.08);
+  --shadow-lg: 0 10px 25px -5px rgba(0, 0, 0, 0.45), 0 8px 10px -6px rgba(0, 0, 0, 0.45);
+  --shadow-glow: 0 0 20px rgba(249, 115, 22, 0.25);
   
   --radius-sm: 8px;
   --radius-md: 14px;
@@ -34,21 +34,21 @@
   --color-info: #3b82f6;
 }
 
-/* Light Theme Overrides */
+/* Light Theme Overrides (Warm Beige & Cream Theme) */
 .light-theme {
-  --bg-primary: #f0f2f5;
+  --bg-primary: #fcfaf7; /* Creamy warm beige background */
   --bg-secondary: rgba(255, 255, 255, 0.8);
-  --bg-glass: rgba(255, 255, 255, 0.7);
+  --bg-glass: rgba(254, 251, 246, 0.7);
   --bg-glass-hover: rgba(255, 255, 255, 0.9);
-  --border-color: rgba(0, 0, 0, 0.08);
-  --border-color-glow: rgba(99, 102, 241, 0.15);
+  --border-color: rgba(40, 20, 10, 0.08);
+  --border-color-glow: rgba(249, 115, 22, 0.15);
   
-  --text-primary: #1f2937;
-  --text-secondary: #4b5563;
-  --text-muted: #9ca3af;
+  --text-primary: #2d1a0e; /* Dark warm brown text */
+  --text-secondary: #6b5c52; /* Muted brown */
+  --text-muted: #a3948b; /* Light warm brown */
   
-  --shadow-lg: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.05);
-  --shadow-glow: 0 0 20px rgba(99, 102, 241, 0.1);
+  --shadow-lg: 0 10px 25px -5px rgba(40, 20, 10, 0.05), 0 8px 10px -6px rgba(40, 20, 10, 0.05);
+  --shadow-glow: 0 0 20px rgba(249, 115, 22, 0.1);
 }
 
 /* ==========================================================================
@@ -105,12 +105,12 @@ a:hover {
   transition: opacity 0.5s ease;
 }
 .bg-glow-1 {
-  background: radial-gradient(circle, var(--accent-primary) 0%, rgba(99,102,241,0) 70%);
+  background: radial-gradient(circle, var(--accent-primary) 0%, rgba(249, 115, 22, 0) 70%);
   top: -100px;
   right: -50px;
 }
 .bg-glow-2 {
-  background: radial-gradient(circle, var(--accent-secondary) 0%, rgba(6,182,212,0) 70%);
+  background: radial-gradient(circle, var(--accent-secondary) 0%, rgba(234, 88, 12, 0) 70%);
   bottom: -150px;
   left: -50px;
 }
