@@ -456,22 +456,26 @@ function saveConfigurations() {
 // ==========================================================================
 function handleFileSelection(e) {
   if (e.target.files.length > 0) {
-    const files = Array.from(e.target.files).slice(0, 5);
+    const files = Array.from(e.target.files);
     processUploadedFiles(files);
-    if (e.target.files.length > 5) {
-      appendAlertMessage('ระบบรองรับการส่งรูปภาพได้สูงสุดทีละ 5 รูปครับ (รูปส่วนเกินถูกตัดออก)', 'info');
-    }
   }
 }
 
 function processUploadedFiles(files) {
-  // Clear any existing preview
-  elements.previewBodyContainer.innerHTML = '';
-  STATE.currentImages = [];
+  const remainingSlots = 5 - STATE.currentImages.length;
+  if (remainingSlots <= 0) {
+    appendAlertMessage('คุณเลือกรูปภาพครบ 5 รูปแล้วครับ หากต้องการเพิ่มกรุณาลบรูปเดิมออกก่อน', 'info');
+    return;
+  }
+  
+  const filesToProcess = files.slice(0, remainingSlots);
+  if (files.length > remainingSlots) {
+    appendAlertMessage(`ระบบรองรับการส่งรูปภาพได้สูงสุดทีละ 5 รูปครับ (มีสิทธิ์เลือกเพิ่มได้อีก ${remainingSlots} รูป)`, 'info');
+  }
   
   let loadedCount = 0;
   
-  files.forEach(file => {
+  filesToProcess.forEach(file => {
     const reader = new FileReader();
     reader.onload = (event) => {
       const base64Data = event.target.result.split(',')[1];
@@ -489,26 +493,47 @@ function processUploadedFiles(files) {
       
       STATE.currentImages.push(imgObject);
       
-      // Render thumbnail dynamically
-      const previewItem = document.createElement('div');
-      previewItem.style.cssText = 'display: flex; align-items: center; gap: 8px; background: rgba(255, 255, 255, 0.03); border: 1px solid var(--border-color); padding: 6px 10px; border-radius: var(--radius-sm); max-width: 220px;';
-      previewItem.innerHTML = `
-        <img src="${event.target.result}" style="width: 42px; height: 42px; object-fit: cover; border-radius: var(--radius-sm); border: 1px solid var(--border-color);" alt="Preview">
-        <div style="display: flex; flex-direction: column; overflow: hidden; min-width: 0;">
-          <span style="font-size: 11px; font-weight: 600; color: var(--text-primary); text-overflow: ellipsis; overflow: hidden; white-space: nowrap;">${name}</span>
-          <span style="font-size: 10px; color: var(--text-muted);">${sizeKB}</span>
-        </div>
-      `;
-      elements.previewBodyContainer.appendChild(previewItem);
-      
       loadedCount++;
-      if (loadedCount === files.length) {
-        elements.imagePreviewPanel.classList.remove('hidden');
-        scrollToBottom();
+      if (loadedCount === filesToProcess.length) {
+        renderImagePreviews();
       }
     };
     reader.readAsDataURL(file);
   });
+}
+
+function renderImagePreviews() {
+  elements.previewBodyContainer.innerHTML = '';
+  
+  if (STATE.currentImages.length === 0) {
+    elements.imagePreviewPanel.classList.add('hidden');
+    return;
+  }
+  
+  STATE.currentImages.forEach((img, idx) => {
+    const previewItem = document.createElement('div');
+    previewItem.className = 'preview-item';
+    previewItem.style.cssText = 'position: relative; width: 70px; height: 70px; border-radius: var(--radius-sm); overflow: hidden; border: 1px solid var(--border-color); box-shadow: var(--shadow-sm); cursor: pointer; transition: var(--transition-smooth);';
+    previewItem.innerHTML = `
+      <img src="${img.dataUrl}" style="width: 100%; height: 100%; object-fit: cover;" alt="Preview">
+      <button type="button" style="position: absolute; top: 4px; right: 4px; background: rgba(0, 0, 0, 0.65); border: none; color: #fff; border-radius: 50%; width: 18px; height: 18px; display: flex; align-items: center; justify-content: center; font-size: 10px; cursor: pointer; backdrop-filter: blur(2px);">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    `;
+    
+    // Bind the remove click event
+    const removeBtn = previewItem.querySelector('button');
+    removeBtn.addEventListener('click', (e) => {
+      e.stopPropagation(); // Prevent trigger click
+      STATE.currentImages.splice(idx, 1);
+      renderImagePreviews();
+    });
+    
+    elements.previewBodyContainer.appendChild(previewItem);
+  });
+  
+  elements.imagePreviewPanel.classList.remove('hidden');
+  scrollToBottom();
 }
 
 function removeImageAttachment() {
