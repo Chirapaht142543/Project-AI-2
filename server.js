@@ -446,18 +446,16 @@ app.get('/api/users/profiles', checkAuth, (req, res) => {
   res.json({ status: 'success', profiles });
 });
 
-// Endpoint: Text Chat (Protected)
+// Endpoint: Text Chat (Protected - Direct human-to-human chat room)
 app.post('/api/chat', checkAuth, async (req, res) => {
   try {
-    const { history, message, model } = req.body;
-    const isModelOpenai = model.startsWith('gpt');
-    const apiKey = isModelOpenai ? process.env.OPENAI_API_KEY : process.env.GEMINI_API_KEY;
+    const { message } = req.body;
 
-    if (!apiKey) {
-      return res.status(400).json({ error: `เซิร์ฟเวอร์ยังไม่ได้ตั้งค่า API Key สำหรับรุ่น: ${model}` });
+    if (!message) {
+      return res.status(400).json({ error: 'กรุณากรอกข้อความส่งแชท!' });
     }
 
-    // 1. Save and broadcast user message immediately
+    // Save and broadcast user message immediately in real-time
     const messages = loadMessages();
     const userMsgId = 'msg_' + Date.now() + '_' + Math.floor(1000 + Math.random() * 9000);
     
@@ -473,117 +471,9 @@ app.post('/api/chat', checkAuth, async (req, res) => {
     });
     
     saveMessages(messages);
-    broadcastMessageUpdate(); // Instant sync
+    broadcastMessageUpdate(); // Instant real-time sync for everyone
 
-    let aiResult = '';
-
-    try {
-      if (isModelOpenai) {
-        const openaiUrl = 'https://api.openai.com/v1/chat/completions';
-        
-        const openAiMessages = history.map(h => ({
-          role: h.role === 'model' ? 'assistant' : 'user',
-          content: h.parts[0].text
-        }));
-        
-        openAiMessages.unshift({
-          role: 'system',
-          content: "คุณคือบอตผู้ช่วยส่วนตัวอัจฉริยะที่แชทพูดคุยทั่วไปได้อย่างเป็นกันเองและให้คำแนะนำที่มีประโยชน์ ภาษาหลักของคุณคือภาษาไทย เขียนตอบให้สุภาพ มีการใช้ Emoji ตกแต่งให้น่าอ่านและกระชับพอเหมาะ"
-        });
-
-        const response = await fetch(openaiUrl, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${apiKey}`
-          },
-          body: JSON.stringify({
-            model: model,
-            messages: openAiMessages
-          })
-        });
-
-        if (!response.ok) {
-          const errorJson = await response.json().catch(() => ({}));
-          throw new Error(errorJson.error?.message || `OpenAI HTTP error ${response.status}`);
-        }
-
-        const responseData = await response.json();
-        aiResult = responseData.choices?.[0]?.message?.content || '';
-      } else {
-        const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
-        
-        const response = await fetch(geminiUrl, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            contents: history,
-            systemInstruction: {
-              parts: [{ text: "คุณคือบอตผู้ช่วยส่วนตัวอัจฉริยะที่แชทพูดคุยทั่วไปได้อย่างเป็นกันเองและให้คำแนะนำที่มีประโยชน์ ภาษาหลักของคุณคือภาษาไทย เขียนตอบให้สุภาพ มีการใช้ Emoji ตกแต่งให้น่าอ่านและกระชับพอเหมาะ" }]
-            }
-          })
-        });
-
-        if (!response.ok) {
-          const errorJson = await response.json().catch(() => ({}));
-          throw new Error(errorJson.error?.message || `Gemini HTTP error ${response.status}`);
-        }
-
-        const responseData = await response.json();
-        aiResult = responseData.candidates?.[0]?.content?.parts?.[0]?.text || '';
-      }
-
-      // 2. Save and broadcast successful bot response
-      const activeMessages = loadMessages();
-      const botMsgId = 'msg_' + (Date.now() + 1) + '_' + Math.floor(1000 + Math.random() * 9000);
-      
-      activeMessages.push({
-        id: botMsgId,
-        sender: 'bot',
-        username: 'bot',
-        nickname: 'MT-TOPUP AI',
-        profileImage: '',
-        text: aiResult,
-        imageSrc: null,
-        timestamp: Date.now() + 1
-      });
-      
-      saveMessages(activeMessages);
-      broadcastMessageUpdate();
-
-      res.json({ text: aiResult });
-
-    } catch (apiError) {
-      console.error('API Error details:', apiError);
-      
-      // Formulate a clean system/bot error message
-      let friendlyError = `เกิดข้อผิดพลาดในการเชื่อมต่อกับ AI: ${apiError.message}`;
-      if (apiError.message.includes('quota') || apiError.message.includes('Rate limit') || apiError.message.includes('429')) {
-        friendlyError = `**⚠️ โควต้าการใช้งานโมเดลเต็มชั่วคราว (Rate Limit / Quota Exceeded)**\n\nบัญชีแบบฟรีของ Gemini API มีการจำกัดการใช้งาน กรุณารอสักครู่แล้วส่งใหม่ หรือสลับรุ่นโมเดลเพื่อใช้งานต่อครับ`;
-      }
-      
-      // Save and broadcast error bot response
-      const activeMessages = loadMessages();
-      const botMsgId = 'msg_' + (Date.now() + 1) + '_' + Math.floor(1000 + Math.random() * 9000);
-      
-      activeMessages.push({
-        id: botMsgId,
-        sender: 'bot',
-        username: 'bot',
-        nickname: 'MT-TOPUP AI',
-        profileImage: '',
-        text: friendlyError,
-        imageSrc: null,
-        timestamp: Date.now() + 1
-      });
-      
-      saveMessages(activeMessages);
-      broadcastMessageUpdate();
-
-      res.status(500).json({ error: friendlyError });
-    }
+    res.json({ status: 'success', message: 'ส่งข้อความเรียบร้อยแล้ว' });
 
   } catch (error) {
     console.error('Chat error:', error);
