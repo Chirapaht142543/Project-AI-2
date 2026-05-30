@@ -807,6 +807,13 @@ a:hover {
   padding: 10px 4px;
   max-height: 120px;
   line-height: 1.5;
+  overflow-y: hidden; /* Hide scrollbar by default */
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}
+
+.chat-input-container textarea::-webkit-scrollbar {
+  display: none; /* Hide scrollbar for Chrome, Safari and Opera */
 }
 
 .chat-input-container textarea::placeholder {
