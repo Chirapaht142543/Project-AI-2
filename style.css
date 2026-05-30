@@ -494,6 +494,7 @@ a:hover {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  flex-shrink: 0; /* Prevents the header from shrinking */
 }
 
 .chat-header h1 {
@@ -771,6 +772,7 @@ a:hover {
    ========================================================================== */
 .chat-footer {
   padding: 20px 30px 24px;
+  flex-shrink: 0; /* Prevents the footer from shrinking */
 }
 
 .chat-input-container {
