@@ -485,6 +485,7 @@ a:hover {
   display: flex;
   flex-direction: column;
   background: rgba(10, 10, 15, 0.05);
+  overflow: hidden; /* Lock header & footer in place, prevent page scrolling! */
 }
 
 .chat-header {
@@ -883,7 +884,9 @@ a:hover {
   
   .chat-container {
     width: 100%;
-    flex: none;
+    height: 100%;
+    flex: 1;
+    overflow: hidden; /* Lock header & footer in place on mobile! */
   }
   
   /* Slide-in sidebar overlay on mobile */
