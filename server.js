@@ -771,8 +771,13 @@ app.post('/api/ocr', checkAuth, async (req, res) => {
       console.error('OCR API Error details:', apiError);
       
       let friendlyError = `เกิดข้อผิดพลาดในการวิเคราะห์รูปภาพ: ${apiError.message}`;
-      if (apiError.message.includes('quota') || apiError.message.includes('Rate limit') || apiError.message.includes('429')) {
-        friendlyError = `**⚠️ โควต้าการใช้งานโมเดลเต็มชั่วคราว (Rate Limit / Quota Exceeded)**\n\nบัญชีแบบฟรีของ Gemini API มีการจำกัดการใช้งาน กรุณารอสักครู่แล้วลองใหม่ หรือสลับรุ่นโมเดลเพื่อใช้งานต่อครับ`;
+      if (apiError.message.includes('quota') || apiError.message.includes('Rate limit') || apiError.message.includes('429') || apiError.message.includes('billing') || apiError.message.includes('balance')) {
+        const isModelOpenai = activeModel.startsWith('gpt');
+        const apiName = isModelOpenai ? 'OpenAI API' : 'Gemini API';
+        const tipText = isModelOpenai 
+          ? 'กรุณาตรวจสอบเครดิตยอดเงินคงเหลือในบัญชี OpenAI ของคุณ (Billing Balance) หรือเพิ่มวงเงินบัตรเครดิตในการตัดรอบบิลครับ' 
+          : 'บัญชีแบบฟรีของ Gemini API มีการจำกัดจำนวนครั้งในการเรียกใช้งานต่อนาที กรุณารอสักครู่แล้วลองใหม่ หรือสลับรุ่นโมเดลเพื่อใช้งานต่อครับ';
+        friendlyError = `**⚠️ โควต้าการใช้งานโมเดลเต็มชั่วคราว (Rate Limit / Quota Exceeded)**\n\nโควต้าบริการของ **${apiName}** หรือยอดเครดิตคงเหลือในบัญชีของคุณอาจจะหมดชั่วคราว\n\n**💡 คำแนะนำ:**\n${tipText}`;
       }
       
       // Save and broadcast error bot response

@@ -948,24 +948,34 @@ async function handleFormSubmit(e) {
           typingIndicator.remove();
           
           // Quota exceeded / high demand messages
-          if (error.message.includes('quota') || error.message.includes('Quota exceeded') || error.message.includes('429') || error.message.includes('exceeded your current quota')) {
+          // Quota exceeded / high demand messages
+          if (error.message.includes('quota') || error.message.includes('Quota exceeded') || error.message.includes('429') || error.message.includes('exceeded your current quota') || error.message.includes('billing') || error.message.includes('balance')) {
+            const isModelOpenai = STATE.model.startsWith('gpt');
+            const apiName = isModelOpenai ? 'OpenAI API' : 'Gemini API';
+            const tipText = isModelOpenai
+              ? `1. กรุณาตรวจสอบยอดเครดิตคงเหลือในบัญชี OpenAI ของคุณ (Billing Balance)
+2. หากเป็นบัญชีใหม่ ให้ตรวจสอบว่ามีการเพิ่มบัตรเครดิตและตั้งค่ายอดตัดเงินสำเร็จแล้วหรือไม่ครับ`
+              : `1. โปรดรอประมาณ 30 วินาที ถึง 1 นาที แล้วทดลองส่งรูปภาพใหม่อีกครั้ง
+2. หรือแผงการตั้งค่าด้านซ้าย สลับประเภทโมเดลเป็น **Google: Gemini 1.5 Flash (โมเดลสำรอง)** ซึ่งเป็นรุ่นก่อนหน้าที่มีโควต้าแยกต่างหาก ทำให้ประมวลผลต่อได้ทันทีครับ!`;
+            
             appendAlertMessage(`
 **⚠️ โควต้าการใช้งานโมเดลเต็มชั่วคราว (Rate Limit / Quota Exceeded)**
 
-บัญชีแบบฟรีของ Gemini API (Free Tier) จะมีการจำกัดจำนวนครั้งในการส่งคำขอต่อนาที หรือโควต้าประจำวันของคุณเต็มแล้ว
+โควต้าการใช้งานหรือวงเงินเครดิตของบริการ **${apiName}** ของคุณอาจจะเต็มชั่วคราว
 
-**💡 วิธีการแก้ไขง่ายๆ:**
-1. โปรดรอประมาณ 30 วินาที ถึง 1 นาที แล้วทดลองส่งรูปภาพใหม่อีกครั้ง
-2. หรือแผงการตั้งค่าด้านซ้าย สลับประเภทโมเดลเป็น **Google: Gemini 1.5 Flash (โมเดลสำรอง)** ซึ่งเป็นรุ่นก่อนหน้าที่มีโควต้าการใช้งานแยกจากกัน ทำให้ทำงานประมวลผลต่อได้ทันทีครับ!
+**💡 คำแนะนำการแก้ไข:**
+${tipText}
             `, 'error');
           } else if (error.message.includes('high demand') || error.message.includes('temporary') || error.message.includes('503') || error.message.includes('experiences')) {
+            const isModelOpenai = STATE.model.startsWith('gpt');
+            const apiName = isModelOpenai ? 'OpenAI API' : 'Gemini API';
             appendAlertMessage(`
 **⚠️ โมเดลนี้กำลังมีผู้ใช้งานหนาแน่นชั่วคราว (High Demand / Spikes in Demand)**
 
-ขณะนี้โมเดลที่คุณเลือกมีผู้ใช้ทั่วโลกเข้าใช้งานพร้อมกันเป็นจำนวนมากทำให้ระบบฝั่งเซิร์ฟเวอร์เต็มชั่วคราว
+ขณะนี้เครื่องบริการของ **${apiName}** ทั่วโลกมีผู้ใช้งานหนาแน่นชั่วคราว
 
 **💡 วิธีการแก้ไขง่ายๆ:**
-1. สลับรุ่นโมเดล AI ในแผงตั้งค่าด้านซ้ายให้เป็น **Google: Gemini 1.5 Flash (โมเดลสำรอง)** ซึ่งเป็นรุ่นที่มีเครื่องเซิร์ฟเวอร์แยกต่างหากและมักจะไม่ค่อยเต็มครับ!
+1. สลับรุ่นโมเดล AI ในแผงตั้งค่าด้านซ้ายให้เป็นรุ่นอื่นที่มีโควต้าแยกต่างหาก
 2. หรือรอประมาณ 10-20 วินาทีแล้วลองกดส่งใหม่อีกครั้งครับ
             `, 'error');
           } else {
