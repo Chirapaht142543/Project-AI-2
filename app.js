@@ -192,6 +192,14 @@ async function checkBackendConfiguration() {
         STATE.webappUrl = 'backend-secured';
       }
       
+      if (config.defaultModel) {
+        STATE.model = config.defaultModel;
+        try {
+          localStorage.setItem('vision_sheet_model', config.defaultModel);
+        } catch (e) {}
+        if (elements.modelSelect) elements.modelSelect.value = config.defaultModel;
+      }
+      
       // Initialize Socket.IO connection and start polling fallback
       if (STATE.useBackend) {
         initializeSocketIO();

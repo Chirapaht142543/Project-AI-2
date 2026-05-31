@@ -533,12 +533,13 @@ app.post('/api/messages/user-images', checkAuth, async (req, res) => {
 app.post('/api/ocr', checkAuth, async (req, res) => {
   try {
     const { image, userText, model, skipUserMessage, savedImagePath } = req.body;
-    const isModelOpenai = model.startsWith('gpt');
+    const activeModel = process.env.DEFAULT_MODEL || model || 'gemini-2.5-flash';
+    const isModelOpenai = activeModel.startsWith('gpt');
     const apiKey = isModelOpenai ? process.env.OPENAI_API_KEY : process.env.GEMINI_API_KEY;
     const webappUrl = process.env.WEBAPP_URL;
 
     if (!apiKey) {
-      return res.status(400).json({ error: `เซิร์ฟเวอร์ยังไม่ได้ตั้งค่า API Key สำหรับรุ่น: ${model}` });
+      return res.status(400).json({ error: `เซิร์ฟเวอร์ยังไม่ได้ตั้งค่า API Key สำหรับรุ่น: ${activeModel}` });
     }
 
     // Save image locally if present and not skipping user message
@@ -604,7 +605,7 @@ app.post('/api/ocr', checkAuth, async (req, res) => {
       if (isModelOpenai) {
         const openaiUrl = 'https://api.openai.com/v1/chat/completions';
         const payload = {
-          model: model,
+          model: activeModel,
           messages: [
             {
               role: 'user',
@@ -638,7 +639,7 @@ app.post('/api/ocr', checkAuth, async (req, res) => {
         const responseData = await response.json();
         rawAiResult = responseData.choices?.[0]?.message?.content || '';
       } else {
-        const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+        const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${activeModel}:generateContent?key=${apiKey}`;
         const payload = {
           contents: [{
             parts: [
